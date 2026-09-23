@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wagenliste</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f4f3ef; --card:#ffffff; --ink:#20201e; --mut:#66655f; --line:#ddd9cf;
+  --red:#c60018; --redsoft:#fdecee; --ok:#0f6e56; --oksoft:#e1f5ee;
+  --warn:#8a6b00; --warnsoft:#fcf3cf;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:'Roboto Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16161a; --card:#212127; --ink:#eceae4; --mut:#a3a199; --line:#34343c;
+    --redsoft:#3a1418; --oksoft:#10302a; --warnsoft:#3a3110;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16161a; --card:#212127; --ink:#eceae4; --mut:#a3a199; --line:#34343c;
+  --redsoft:#3a1418; --oksoft:#10302a; --warnsoft:#3a3110;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45}
+img{max-width:100%}
+header.app{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--card);border-bottom:1px solid var(--line)}
+header.app .bar{height:5px;background:var(--red)}
+header.app .row{display:flex;align-items:center;gap:10px;padding:10px 14px}
+header.app h1{font-size:17px;margin:0;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{padding:14px 14px 90px;max-width:900px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+h2{font-size:15px;margin:0 0 10px;font-weight:700}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px;font-weight:600}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px}
+input.num{font-family:var(--mono);letter-spacing:.5px;font-weight:700}
+button{font-family:var(--font);font-size:15px;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:11px 14px;cursor:pointer}
+button.primary{background:var(--red);border-color:var(--red);color:#fff}
+button.ghost{background:transparent}
+button.small{padding:7px 10px;font-size:13px}
+button:disabled{opacity:.5}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btnrow>button{flex:1 1 auto}
+.muted{color:var(--mut);font-size:13px}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line)}
+.side{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--red);margin:4px 2px}
+ul.list{list-style:none;margin:0;padding:0}
+ul.list li{display:flex;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line)}
+ul.list li:last-child{border-bottom:none}
+.pos{width:30px;height:30px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:var(--bg);border:1px solid var(--line)}
+.thumb{width:44px;height:33px;flex:none;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.grow{flex:1;min-width:0}
+.nr{font-family:var(--mono);font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iconbtn{border:none;background:transparent;font-size:17px;padding:6px 7px;color:var(--mut);cursor:pointer}
+.note{border-radius:10px;padding:10px 12px;font-size:13px;margin-top:10px}
+.note.ok{background:var(--oksoft);color:var(--ok)}
+.note.bad{background:var(--redsoft);color:var(--red)}
+.note.warn{background:var(--warnsoft);color:var(--warn)}
+.foto{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
+.fab{position:fixed;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));max-width:872px;margin:0 auto;display:flex;gap:8px;z-index:30}
+.fab button{flex:1;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.hidden{display:none !important}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{padding:7px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:600;background:var(--bg);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff}
+.empty{text-align:center;color:var(--mut);padding:26px 10px;font-size:14px}
+.progress{height:6px;background:var(--bg);border-radius:999px;overflow:hidden;margin-top:10px}
+.progress>div{height:100%;width:0;background:var(--red);transition:width .2s}
+dialog{border:none;border-radius:14px;padding:0;background:var(--card);color:var(--ink);max-width:420px;width:92%}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.dlg{padding:16px}
+.two{display:flex;gap:8px}
+.two>*{flex:1}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="bar"></div>
+  <div class="row">
+    <button id="back" class="iconbtn hidden" title="Zurück">‹</button>
+    <h1 id="title">Wagenlisten</h1>
+    <button id="themeBtn" class="iconbtn" title="Hell/Dunkel">◐</button>
+  </div>
+</header>
+
+<main>
+  <!-- Übersicht -->
+  <section id="viewHome">
+    <div class="card">
+      <h2>Meine Listen</h2>
+      <ul class="list" id="listen"></ul>
+      <div class="empty hidden" id="listenLeer">Noch keine Liste. Unten eine neue Liste anlegen.</div>
+    </div>
+    <p class="muted">Alle Daten und Fotos bleiben nur auf diesem Gerät. Nichts wird hochgeladen.</p>
+  </section>
+
+  <!-- Eine Liste -->
+  <section id="viewListe" class="hidden">
+    <div class="card">
+      <h2>Angaben</h2>
+      <div class="two">
+        <div><label for="gleis">Gleis</label><input id="gleis" inputmode="numeric" placeholder="856"></div>
+        <div><label for="datum">Datum</label><input id="datum" type="date"></div>
+      </div>
+      <div class="two">
+        <div><label for="seiteA">Seite bei Wagen 1</label><input id="seiteA" placeholder="Basel"></div>
+        <div><label for="seiteB">Seite beim letzten Wagen</label><input id="seiteB" placeholder="Zürich"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Wagen <span class="pill" id="anzahl">0</span></h2>
+      <div class="side"><span id="lblA">Seite Basel</span><span id="lblB">Seite Zürich</span></div>
+      <ul class="list" id="wagen"></ul>
+      <div class="empty hidden" id="wagenLeer">Noch keine Wagen erfasst.</div>
+      <div class="btnrow">
+        <button id="pdfBtn" class="primary">PDF erstellen</button>
+        <button id="umdrehen" class="ghost">Reihenfolge umdrehen</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wagen erfassen -->
+  <section id="viewWagen" class="hidden">
+    <div class="card">
+      <h2>Foto</h2>
+      <img id="vorschau" class="foto hidden" alt="Foto des Wagens">
+      <div class="btnrow">
+        <button id="fotoBtn">Foto aufnehmen</button>
+        <button id="ocrBtn" class="ghost">Nummer aus Foto lesen</button>
+      </div>
+      <input id="fotoInput" type="file" accept="image/*" capture="environment" class="hidden">
+      <div class="progress hidden" id="ocrBar"><div></div></div>
+      <div id="ocrInfo" class="note hidden"></div>
+    </div>
+    <div class="card">
+      <h2>Wagennummer</h2>
+      <input id="nummer" class="num" inputmode="numeric" placeholder="31 85 6770 321-6" autocomplete="off">
+      <div id="nrInfo" class="note hidden"></div>
+      <label>Gattung</label>
+      <div class="chips" id="gattungChips"></div>
+      <label for="gattungFrei">Eigene Gattung / Bemerkung</label>
+      <input id="gattungFrei" placeholder="z. B. Aushubwagen, beladen mit Schotter">
+      <div class="btnrow">
+        <button id="speichern" class="primary">Speichern</button>
+        <button id="loeschen" class="ghost">Wagen löschen</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="fab" id="fabHome"><button class="primary" id="neueListe">Neue Liste</button></div>
+<div class="fab hidden" id="fabListe"><button class="primary" id="neuerWagen">Wagen erfassen</button></div>
+
+<dialog id="dlg"><div class="dlg">
+  <p id="dlgText" style="margin:0 0 14px"></p>
+  <div class="two">
+    <button id="dlgNein" class="ghost">Abbrechen</button>
+    <button id="dlgJa" class="primary">Ja</button>
+  </div>
+</div></dialog>
+
+<script>
+"use strict";
+
+/* ---------------- Gattungs-Katalog ---------------- */
+const GATTUNGEN = [
+  {k:"fans",  name:"Fans-u",       txt:"Aushubwagen",             col:["#FCEFA0","#B89A00","#5A4A00"]},
+  {k:"xas",   name:"Xas",          txt:"62-Wagen",                col:["#F1EFE8","#5F5E5A","#2C2C2A"]},
+  {k:"xasS",  name:"Xas",          txt:"Schwellenwagen",          col:["#E1F5EE","#0F6E56","#085041"]},
+  {k:"xans",  name:"Xans",         txt:"ST-Einheit",              col:["#E6F1FB","#185FA5","#0C447C"]},
+  {k:"mfs33", name:"MFS 33",       txt:"beladen mit Schotter",    col:["#E6F1FB","#185FA5","#0C447C"]},
+  {k:"mfs38", name:"MFS 38",       txt:"beladen mit Schotter",    col:["#EEEDFE","#534AB7","#3C3489"]},
+  {k:"ks",    name:"Ks",           txt:"Flachwagen",              col:["#E1F5EE","#0F6E56","#085041"]},
+  {k:"smnps", name:"Smnps",        txt:"Flachwagen",              col:["#EEEDFE","#534AB7","#3C3489"]},
+  {k:"frei",  name:"Andere",       txt:"",                        col:["#F1EFE8","#5F5E5A","#2C2C2A"]}
+];
+const gattung = k => GATTUNGEN.find(g=>g.k===k) || GATTUNGEN[GATTUNGEN.length-1];
+
+/* ---------------- Speicher (IndexedDB) ---------------- */
+const DB = (()=>{
+  let dbp = null;
+  function open(){
+    if(dbp) return dbp;
+    dbp = new Promise((res,rej)=>{
+      const r = indexedDB.open("wagenliste",1);
+      r.onupgradeneeded = ()=>{
+        const db = r.result;
+        if(!db.objectStoreNames.contains("listen")) db.createObjectStore("listen",{keyPath:"id"});
+        if(!db.objectStoreNames.contains("fotos"))  db.createObjectStore("fotos");
+      };
+      r.onsuccess = ()=>res(r.result);
+      r.onerror   = ()=>rej(r.error);
+    });
+    return dbp;
+  }
+  const tx = async (store,mode,fn)=>{
+    const db = await open();
+    return new Promise((res,rej)=>{
+      const t = db.transaction(store,mode);
+      const s = t.objectStore(store);
+      let out;
+      try{ out = fn(s); }catch(e){ rej(e); return; }
+      t.oncomplete = ()=>res(out && out.result !== undefined ? out.result : out);
+      t.onerror = ()=>rej(t.error);
+    });
+  };
+  return {
+    alle:      ()=>tx("listen","readonly",s=>s.getAll()),
+    hol:  id   =>tx("listen","readonly",s=>s.get(id)),
+    sichere: l =>tx("listen","readwrite",s=>s.put(l)),
+    weg:  id   =>tx("listen","readwrite",s=>s.delete(id)),
+    foto: id   =>tx("fotos","readonly",s=>s.get(id)),
+    fotoSet:(id,d)=>tx("fotos","readwrite",s=>s.put(d,id)),
+    fotoWeg:id =>tx("fotos","readwrite",s=>s.delete(id))
+  };
+})();
+
+/* ---------------- UIC-Nummer ---------------- */
+function pruefziffer(elf){
+  let s = 0;
+  for(let i=0;i<elf.length;i++){
+    let v = parseInt(elf[i],10) * (i % 2 === 0 ? 2 : 1);
+    s += Math.floor(v/10) + (v%10);
+  }
+  return (10 - (s % 10)) % 10;
+}
+function formatiere(ziffern){
+  const z = ziffern.replace(/\D/g,"").slice(0,12);
+  let out = "";
+  if(z.length>0)  out += z.slice(0,2);
+  if(z.length>2)  out += " " + z.slice(2,4);
+  if(z.length>4)  out += " " + z.slice(4,8);
+  if(z.length>8)  out += " " + z.slice(8,11);
+  if(z.length>11) out += "-" + z.slice(11,12);
+  return out;
+}
+function pruefe(text){
+  const z = (text||"").replace(/\D/g,"");
+  if(z.length < 12) return {ok:null, text:`${z.length} von 12 Ziffern`};
+  const soll = pruefziffer(z.slice(0,11));
+  if(soll === parseInt(z[11],10)) return {ok:true, text:"Prüfziffer stimmt"};
+  return {ok:false, text:`Prüfziffer stimmt nicht — erwartet wäre ${soll}`};
+}
+
+/* ---------------- Zustand ---------------- */
+let listen = [];       // Übersicht
+let aktuell = null;    // geladene Liste
+let wIndex = -1;       // bearbeiteter Wagen
+let wEntwurf = null;   // {nr, gk, frei, fotoId, fotoData}
+
+const $  = s => document.querySelector(s);
+const el = (t,c,x)=>{ const n=document.createElement(t); if(c) n.className=c; if(x!=null) n.textContent=x; return n; };
+const heute = ()=> new Date().toISOString().slice(0,10);
+const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ---------------- Ansichten ---------------- */
+function zeige(v){
+  $("#viewHome").classList.toggle("hidden", v!=="home");
+  $("#viewListe").classList.toggle("hidden", v!=="liste");
+  $("#viewWagen").classList.toggle("hidden", v!=="wagen");
+  $("#fabHome").classList.toggle("hidden", v!=="home");
+  $("#fabListe").classList.toggle("hidden", v!=="liste");
+  $("#back").classList.toggle("hidden", v==="home");
+  $("#title").textContent = v==="home" ? "Wagenlisten"
+    : v==="liste" ? ("Gleis " + (aktuell.gleis||"–"))
+    : (wIndex>=0 ? "Wagen "+(wIndex+1) : "Neuer Wagen");
+  window.scrollTo(0,0);
+}
+
+/* ---------------- Übersicht ---------------- */
+async function ladeHome(){
+  listen = (await DB.alle()).sort((a,b)=> (b.geaendert||0)-(a.geaendert||0));
+  const ul = $("#listen"); ul.innerHTML = "";
+  $("#listenLeer").classList.toggle("hidden", listen.length>0);
+  listen.forEach(l=>{
+    const li = el("li");
+    const p = el("div","pos", String(l.wagen.length)); li.appendChild(p);
+    const g = el("div","grow");
+    g.appendChild(el("div","nr","Gleis "+(l.gleis||"–")));
+    g.appendChild(el("div","sub",`${l.datum||""} · ${l.seiteA||"?"} → ${l.seiteB||"?"}`));
+    li.appendChild(g);
+    const oeff = el("button","iconbtn","›"); oeff.title="Öffnen";
+    oeff.onclick = ()=>oeffne(l.id);
+    const del = el("button","iconbtn","🗑"); del.title="Liste löschen";
+    del.onclick = async (e)=>{ e.stopPropagation();
+      if(!await frage(`Liste "Gleis ${l.gleis}" mit ${l.wagen.length} Wagen löschen?`)) return;
+      for(const w of l.wagen){ if(w.fotoId) await DB.fotoWeg(w.fotoId); }
+      await DB.weg(l.id); ladeHome();
+    };
+    li.onclick = (e)=>{ if(e.target===del||e.target===oeff) return; oeffne(l.id); };
+    li.appendChild(del); li.appendChild(oeff);
+    ul.appendChild(li);
+  });
+  zeige("home");
+}
+
+async function neueListe(){
+  aktuell = {id:uid(), gleis:"", datum:heute(), seiteA:"Basel", seiteB:"Zürich", wagen:[], geaendert:Date.now()};
+  await DB.sichere(aktuell);
+  await zeichneListe();
+}
+async function oeffne(id){ aktuell = await DB.hol(id); await zeichneListe(); }
+
+/* ---------------- Listenansicht ---------------- */
+async function zeichneListe(){
+  $("#gleis").value  = aktuell.gleis||"";
+  $("#datum").value  = aktuell.datum||heute();
+  $("#seiteA").value = aktuell.seiteA||"";
+  $("#seiteB").value = aktuell.seiteB||"";
+  $("#lblA").textContent = "Seite " + (aktuell.seiteA||"–");
+  $("#lblB").textContent = "Seite " + (aktuell.seiteB||"–");
+  $("#anzahl").textContent = aktuell.wagen.length;
+  const ul = $("#wagen"); ul.innerHTML = "";
+  $("#wagenLeer").classList.toggle("hidden", aktuell.wagen.length>0);
+  for(let i=0;i<aktuell.wagen.length;i++){
+    const w = aktuell.wagen[i];
+    const g = gattung(w.gk);
+    const li = el("li");
+    const p = el("div","pos",String(i+1));
+    p.style.background = g.col[0]; p.style.borderColor = g.col[1]; p.style.color = g.col[2];
+    li.appendChild(p);
+    if(w.fotoId){
+      const img = el("img","thumb"); img.alt = "Foto Wagen "+(i+1);
+      DB.foto(w.fotoId).then(d=>{ if(d) img.src = d; });
+      li.appendChild(img);
+    }
+    const c = el("div","grow");
+    c.appendChild(el("div","nr", w.nr||"ohne Nummer"));
+    c.appendChild(el("div","sub", [g.name, w.frei || g.txt].filter(Boolean).join(" · ")));
+    li.appendChild(c);
+    const up = el("button","iconbtn","↑"); up.title="nach vorne";
+    up.onclick = e=>{e.stopPropagation(); tausche(i,i-1);};
+    const dn = el("button","iconbtn","↓"); dn.title="nach hinten";
+    dn.onclick = e=>{e.stopPropagation(); tausche(i,i+1);};
+    li.appendChild(up); li.appendChild(dn);
+    li.onclick = e=>{ if(e.target===up||e.target===dn) return; bearbeite(i); };
+    ul.appendChild(li);
+  }
+  zeige("liste");
+}
+async function tausche(a,b){
+  if(b<0 || b>=aktuell.wagen.length) return;
+  const t = aktuell.wagen[a]; aktuell.wagen[a]=aktuell.wagen[b]; aktuell.wagen[b]=t;
+  await sichere(); zeichneListe();
+}
+async function sichere(){ aktuell.geaendert = Date.now(); await DB.sichere(aktuell); }
+
+["gleis","datum","seiteA","seiteB"].forEach(id=>{
+  $("#"+id).addEventListener("change", async ()=>{
+    aktuell[id] = $("#"+id).value;
+    $("#lblA").textContent = "Seite " + (aktuell.seiteA||"–");
+    $("#lblB").textContent = "Seite " + (aktuell.seiteB||"–");
+    $("#title").textContent = "Gleis " + (aktuell.gleis||"–");
+    await sichere(); ladeHomeStill();
+  });
+});
+async function ladeHomeStill(){ listen = await DB.alle(); }
+
+$("#umdrehen").onclick = async ()=>{
+  if(!await frage("Reihenfolge der Wagen umdrehen? Wagen 1 wird zum letzten.")) return;
+  aktuell.wagen.reverse();
+  const a = aktuell.seiteA; aktuell.seiteA = aktuell.seiteB; aktuell.seiteB = a;
+  await sichere(); zeichneListe();
+};
+
+/* ---------------- Wagen erfassen ---------------- */
+function chipsZeichnen(sel){
+  const box = $("#gattungChips"); box.innerHTML = "";
+  GATTUNGEN.forEach(g=>{
+    const b = el("button","chip", g.txt ? `${g.name} – ${g.txt}` : g.name);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(g.k===sel));
+    b.onclick = ()=>{ wEntwurf.gk = g.k; chipsZeichnen(g.k); };
+    box.appendChild(b);
+  });
+}
+function neuerWagen(){
+  wIndex = -1;
+  wEntwurf = {nr:"", gk:"xas", frei:"", fotoId:null, fotoData:null};
+  fuelleWagen();
+}
+async function bearbeite(i){
+  wIndex = i;
+  const w = aktuell.wagen[i];
+  wEntwurf = {nr:w.nr, gk:w.gk, frei:w.frei||"", fotoId:w.fotoId, fotoData:null};
+  if(w.fotoId) wEntwurf.fotoData = await DB.foto(w.fotoId);
+  fuelleWagen();
+}
+function fuelleWagen(){
+  $("#nummer").value = wEntwurf.nr||"";
+  $("#gattungFrei").value = wEntwurf.frei||"";
+  chipsZeichnen(wEntwurf.gk);
+  const v = $("#vorschau");
+  if(wEntwurf.fotoData){ v.src = wEntwurf.fotoData; v.classList.remove("hidden"); }
+  else { v.removeAttribute("src"); v.classList.add("hidden"); }
+  $("#loeschen").classList.toggle("hidden", wIndex<0);
+  $("#ocrInfo").classList.add("hidden");
+  nrPruefen();
+  zeige("wagen");
+}
+function nrPruefen(){
+  const r = pruefe($("#nummer").value);
+  const n = $("#nrInfo");
+  if(r.ok===null && !$("#nummer").value){ n.classList.add("hidden"); return; }
+  n.className = "note " + (r.ok===true ? "ok" : r.ok===false ? "bad" : "warn");
+  n.textContent = r.text;
+  n.classList.remove("hidden");
+}
+$("#nummer").addEventListener("input", e=>{
+  const pos = e.target.selectionStart === e.target.value.length;
+  e.target.value = formatiere(e.target.value);
+  if(pos) e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+  nrPruefen();
+});
+$("#gattungFrei").addEventListener("input", e=>{ wEntwurf.frei = e.target.value; });
+
+$("#fotoBtn").onclick = ()=> $("#fotoInput").click();
+$("#fotoInput").addEventListener("change", async e=>{
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  wEntwurf.fotoData = await verkleinere(f, 1400, .82);
+  const v = $("#vorschau"); v.src = wEntwurf.fotoData; v.classList.remove("hidden");
+  e.target.value = "";
+});
+function verkleinere(file, max, q){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      let {width:w, height:h} = img;
+      const s = Math.min(1, max/Math.max(w,h));
+      w = Math.round(w*s); h = Math.round(h*s);
+      const c = document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      res(c.toDataURL("image/jpeg", q));
+    };
+    img.onerror = rej;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+$("#speichern").onclick = async ()=>{
+  const nr = formatiere($("#nummer").value);
+  if(!nr && !wEntwurf.fotoData){ melde("#ocrInfo","warn","Bitte eine Nummer eingeben oder ein Foto aufnehmen."); return; }
+  let fotoId = wEntwurf.fotoId;
+  if(wEntwurf.fotoData){
+    fotoId = fotoId || uid();
+    await DB.fotoSet(fotoId, wEntwurf.fotoData);
+  }
+  const w = {nr, gk:wEntwurf.gk, frei:$("#gattungFrei").value.trim(), fotoId};
+  if(wIndex<0) aktuell.wagen.push(w); else aktuell.wagen[wIndex]=w;
+  await sichere(); zeichneListe();
+};
+$("#loeschen").onclick = async ()=>{
+  if(wIndex<0) return;
+  if(!await frage("Diesen Wagen aus der Liste löschen?")) return;
+  const w = aktuell.wagen[wIndex];
+  if(w.fotoId) await DB.fotoWeg(w.fotoId);
+  aktuell.wagen.splice(wIndex,1);
+  await sichere(); zeichneListe();
+};
+
+/* ---------------- OCR ---------------- */
+let tessLaden = null;
+function ladeTesseract(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  if(tessLaden) return tessLaden;
+  tessLaden = new Promise((res,rej)=>{
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js";
+    s.onload = ()=> res(window.Tesseract);
+    s.onerror = ()=> rej(new Error("Tesseract konnte nicht geladen werden"));
+    document.head.appendChild(s);
+  });
+  return tessLaden;
+}
+function melde(sel, art, text){
+  const n = $(sel); n.className = "note " + art; n.textContent = text; n.classList.remove("hidden");
+}
+// Kandidaten aus OCR-Text ziehen: 12 Ziffern am Stück, Prüfziffer entscheidet
+function findeNummer(text){
+  const roh = text.replace(/[oOD]/g,"0").replace(/[lLiI|]/g,"1").replace(/[sS]/g,"5").replace(/[bB]/g,"6");
+  const z = roh.replace(/\D/g,"");
+  const treffer = [];
+  for(let i=0;i+12<=z.length;i++){
+    const k = z.slice(i,i+12);
+    if(pruefziffer(k.slice(0,11)) === parseInt(k[11],10)) treffer.push(k);
+  }
+  if(treffer.length) return {nr:treffer[0], sicher:true};
+  for(let i=0;i+12<=z.length;i++){
+    const k = z.slice(i,i+12);
+    if(/^(31|33|21|23|80|84|99|37|43)/.test(k)) return {nr:k, sicher:false};
+  }
+  if(z.length>=12) return {nr:z.slice(0,12), sicher:false};
+  return null;
+}
+function ocrBild(dataUrl, faktor){
+  return new Promise(res=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width*faktor); c.height = Math.round(img.height*faktor);
+      const g = c.getContext("2d");
+      g.drawImage(img,0,0,c.width,c.height);
+      const d = g.getImageData(0,0,c.width,c.height);
+      const p = d.data;
+      for(let i=0;i<p.length;i+=4){
+        let v = .299*p[i] + .587*p[i+1] + .114*p[i+2];
+        v = v < 110 ? 0 : v > 165 ? 255 : (v-110)*(255/55);
+        p[i]=p[i+1]=p[i+2]=v;
+      }
+      g.putImageData(d,0,0);
+      res(c.toDataURL("image/png"));
+    };
+    img.src = dataUrl;
+  });
+}
+$("#ocrBtn").onclick = async ()=>{
+  if(!wEntwurf.fotoData){ melde("#ocrInfo","warn","Zuerst ein Foto aufnehmen."); return; }
+  const bar = $("#ocrBar"); bar.classList.remove("hidden"); bar.firstElementChild.style.width="5%";
+  melde("#ocrInfo","warn","Nummer wird gelesen, das dauert einen Moment …");
+  $("#ocrBtn").disabled = true;
+  try{
+    const T = await ladeTesseract();
+    const bild = await ocrBild(wEntwurf.fotoData, 1.4);
+    const r = await T.recognize(bild, "eng", {
+      logger: m => { if(m.status==="recognizing text") bar.firstElementChild.style.width = Math.round(m.progress*100)+"%"; }
+    });
+    const fund = findeNummer(r.data.text || "");
+    if(fund){
+      $("#nummer").value = formatiere(fund.nr);
+      nrPruefen();
+      melde("#ocrInfo", fund.sicher?"ok":"warn",
+        fund.sicher ? "Nummer gelesen und Prüfziffer stimmt. Trotzdem kurz mit dem Foto vergleichen."
+                    : "Nummer gelesen, aber Prüfziffer stimmt nicht. Bitte von Hand korrigieren.");
+    } else {
+      melde("#ocrInfo","bad","Keine Wagennummer erkannt. Bitte von Hand eintippen.");
+    }
+  }catch(err){
+    melde("#ocrInfo","bad","Lesen nicht möglich: " + err.message + ". Nummer bitte von Hand eintippen.");
+  }finally{
+    $("#ocrBtn").disabled = false;
+    bar.firstElementChild.style.width="100%";
+    setTimeout(()=>bar.classList.add("hidden"), 400);
+  }
+};
+
+/* ---------------- PDF ---------------- */
+$("#pdfBtn").onclick = async ()=>{
+  if(!aktuell.wagen.length){ await frageInfo("Die Liste hat noch keine Wagen."); return; }
+  $("#pdfBtn").disabled = true;
+  const alt = $("#pdfBtn").textContent; $("#pdfBtn").textContent = "PDF wird erstellt …";
+  try{ await bauePdf(); }
+  catch(e){ await frageInfo("PDF fehlgeschlagen: " + e.message); }
+  finally{ $("#pdfBtn").disabled = false; $("#pdfBtn").textContent = alt; }
+};
+
+async function bauePdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:"landscape", unit:"pt", format:"a4"});
+  const PW = 842, PH = 595, M = 30;
+  const W = aktuell.wagen, n = W.length;
+  const titel = "Gleis " + (aktuell.gleis||"–") + " – Wagenliste";
+  const datum = (aktuell.datum||heute()).split("-").reverse().join(".");
+  let seite = 0;
+
+  const rgb = hex => [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+  const fill = h => doc.setFillColor(...rgb(h));
+  const draw = h => doc.setDrawColor(...rgb(h));
+  const text = h => doc.setTextColor(...rgb(h));
+
+  function kopf(sub){
+    if(seite>0) doc.addPage();
+    seite++;
+    fill("#C60018"); doc.rect(0,0,PW,6,"F");
+    text("#2C2C2A"); doc.setFont("helvetica","bold"); doc.setFontSize(16);
+    doc.text(titel, M, 34);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10); text("#5F5E5A");
+    doc.text(sub, PW-M, 34, {align:"right"});
+    draw("#D3D1C7"); doc.setLineWidth(.5); doc.line(M,44,PW-M,44);
+    doc.setFontSize(8);
+    doc.text(`Stand: ${datum}  ·  Wagen 1 = Seite ${aktuell.seiteA||"–"}  ·  Wagen ${n} = Seite ${aktuell.seiteB||"–"}`, M, PH-16);
+    doc.text("Seite " + seite, PW-M, PH-16, {align:"right"});
+  }
+
+  // Zusammenfassung
+  const zaehler = {};
+  W.forEach(w=>{ const g=gattung(w.gk); const k=g.txt?`${g.name} ${g.txt}`:g.name; zaehler[k]=(zaehler[k]||0)+1; });
+  const summe = Object.entries(zaehler).map(([k,v])=>`${v} ${k}`).join(" · ");
+
+  /* --- Gleisplan, 8 pro Reihe, 4 Reihen pro Seite --- */
+  const proReihe = 8, proSeite = 32;
+  for(let start=0; start<n; start+=proSeite){
+    kopf("Gleisplan");
+    const teil = W.slice(start, start+proSeite);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10); text("#444441");
+    doc.text(`${n} Einheiten · ${summe}`.slice(0,150), M, 64);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9); text("#5F5E5A");
+    doc.text("Leserichtung: Reihe für Reihe von links nach rechts.", M, 78);
+    const bw = (PW-2*M-(proReihe-1)*5)/proReihe, bh = 62, rowh = 106, top = 104;
+    if(start===0){
+      text("#C60018"); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+      fill("#C60018"); doc.triangle(M, 92, M+9, 88, M+9, 96, "F");
+      doc.text("Seite " + (aktuell.seiteA||"–"), M+14, 95);
+    }
+    const reihen = Math.ceil(teil.length/proReihe);
+    teil.forEach((w,i)=>{
+      const r = Math.floor(i/proReihe), k = i%proReihe;
+      const x = M + k*(bw+5), y = top + r*rowh;
+      const g = gattung(w.gk);
+      fill(g.col[0]); draw(g.col[1]); doc.setLineWidth(.8);
+      doc.roundedRect(x, y, bw, bh, 4, 4, "FD");
+      text(g.col[2]);
+      doc.setFont("helvetica","bold"); doc.setFontSize(12);
+      doc.text(String(start+i+1), x+bw/2, y+17, {align:"center"});
+      let fs = 9;
+      const nr = w.nr || "–";
+      while(doc.getStringUnitWidth(nr)*fs > bw-8 && fs > 5) fs -= .25;
+      doc.setFontSize(fs); doc.text(nr, x+bw/2, y+36, {align:"center"});
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
+      doc.text(g.name, x+bw/2, y+54, {align:"center"});
+      draw("#444441"); doc.setLineWidth(1); fill("#FFFFFF");
+      doc.circle(x+14, y+bh+6, 4.5, "FD"); doc.circle(x+bw-14, y+bh+6, 4.5, "FD");
+    });
+    for(let r=0;r<reihen;r++){
+      const y = top + r*rowh + bh + 12;
+      draw("#444441"); doc.setLineWidth(1.4); doc.line(M-6, y, PW-M+6, y);
+      doc.setLineWidth(.6); doc.line(M-6, y+3, PW-M+6, y+3);
+      if(r<reihen-1){
+        doc.setFont("helvetica","italic"); doc.setFontSize(8); text("#5F5E5A");
+        doc.text("weiter in der nächsten Reihe", PW-M, y+17, {align:"right"});
+      }
+    }
+    if(start+proSeite >= n){
+      const y = top + (reihen-1)*rowh + bh + 40;
+      text("#C60018"); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+      doc.text("Seite " + (aktuell.seiteB||"–"), PW-M-14, y, {align:"right"});
+      fill("#C60018"); doc.triangle(PW-M, y-4, PW-M-9, y-8, PW-M-9, y, "F");
+    }
+    // Legende
+    const benutzt = [...new Set(teil.map(w=>w.gk))].map(gattung);
+    let lx = M, ly = PH-42;
+    doc.setFontSize(9);
+    benutzt.forEach(g=>{
+      fill(g.col[0]); draw(g.col[1]); doc.setLineWidth(.6);
+      doc.roundedRect(lx, ly-9, 12, 12, 2, 2, "FD");
+      text("#2C2C2A"); doc.setFont("helvetica","normal");
+      const lab = g.txt ? `${g.name} – ${g.txt}` : g.name;
+      doc.text(lab, lx+17, ly);
+      lx += 17 + doc.getStringUnitWidth(lab)*9 + 20;
+    });
+  }
+
+  /* --- Tabelle --- */
+  const proTab = 30;
+  for(let start=0; start<n; start+=proTab){
+    kopf("Wagenliste");
+    const cols = [M, M+70, M+270, M+370];
+    let y = 70;
+    fill("#2C2C2A"); doc.rect(M, y-12, PW-2*M, 18, "F");
+    text("#FFFFFF"); doc.setFont("helvetica","bold"); doc.setFontSize(10);
+    ["Pos.","Wagennummer","Gattung","Bemerkung"].forEach((h,i)=>doc.text(h, cols[i]+6, y));
+    const rh = 15;
+    W.slice(start, start+proTab).forEach((w,i)=>{
+      const idx = start+i;
+      y += rh;
+      if(idx%2===0){ fill("#F7F6F2"); doc.rect(M, y-11, PW-2*M, rh, "F"); }
+      const g = gattung(w.gk);
+      fill(g.col[0]); draw(g.col[1]); doc.setLineWidth(.6); doc.rect(cols[2]+6, y-8, 8, 8, "FD");
+      text("#2C2C2A"); doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+      doc.text(String(idx+1), cols[0]+6, y);
+      doc.setFont("courier","bold"); doc.setFontSize(10);
+      doc.text(w.nr||"–", cols[1]+6, y);
+      doc.setFont("helvetica","normal"); doc.setFontSize(9.5);
+      doc.text(g.name, cols[2]+18, y);
+      let bem = w.frei || g.txt || "";
+      if(idx===0)    bem = `Seite ${aktuell.seiteA||"–"}` + (bem?" – "+bem:"");
+      if(idx===n-1)  bem = `Seite ${aktuell.seiteB||"–"}` + (bem?" – "+bem:"");
+      text(idx===0||idx===n-1 ? "#C60018" : "#5F5E5A");
+      doc.text(bem.slice(0,70), cols[3]+6, y);
+    });
+    if(start+proTab >= n){
+      doc.setFont("helvetica","italic"); doc.setFontSize(8); text("#5F5E5A");
+      doc.text("Nummern mit gültiger UIC-Prüfziffer sind kontrolliert.", M, y+20);
+    }
+  }
+
+  /* --- Fotoseiten --- */
+  const mitFoto = [];
+  for(let i=0;i<n;i++){ if(W[i].fotoId){ const d = await DB.foto(W[i].fotoId); if(d) mitFoto.push({i, d}); } }
+  const cw = (PW-2*M-16)/2, ch = (PH-44-30-24-2*16)/2;
+  for(let p=0;p<mitFoto.length;p+=4){
+    kopf("Fotos");
+    mitFoto.slice(p,p+4).forEach((f,j)=>{
+      const w = W[f.i], g = gattung(w.gk);
+      const r = Math.floor(j/2), k = j%2;
+      const x = M + k*(cw+16), ytop = 56 + r*(ch+16);
+      fill(g.col[0]); draw(g.col[1]); doc.setLineWidth(.6); doc.rect(x, ytop, cw, 18, "FD");
+      text(g.col[2]); doc.setFont("helvetica","bold"); doc.setFontSize(10);
+      doc.text("Wagen " + (f.i+1), x+6, ytop+13);
+      doc.setFont("courier","bold"); doc.setFontSize(10);
+      doc.text(w.nr||"–", x+70, ytop+13);
+      doc.setFont("helvetica","normal"); doc.setFontSize(9);
+      const cap = w.frei || (g.txt ? `${g.name} – ${g.txt}` : g.name);
+      doc.text(cap.slice(0,42), x+cw-6, ytop+13, {align:"right"});
+      let ih = ch-20, iw = ih*4/3;
+      if(iw > cw){ iw = cw; ih = cw*3/4; }
+      doc.addImage(f.d, "JPEG", x+(cw-iw)/2, ytop+20, iw, ih);
+    });
+  }
+
+  const name = `Gleis_${(aktuell.gleis||"x")}_Wagenliste.pdf`;
+  doc.save(name);
+}
+
+/* ---------------- Dialog ---------------- */
+function frage(t){
+  return new Promise(res=>{
+    $("#dlgText").textContent = t;
+    $("#dlgNein").classList.remove("hidden");
+    $("#dlgJa").textContent = "Ja";
+    const dlg = $("#dlg"); dlg.showModal();
+    $("#dlgJa").onclick  = ()=>{ dlg.close(); res(true); };
+    $("#dlgNein").onclick= ()=>{ dlg.close(); res(false); };
+  });
+}
+function frageInfo(t){
+  return new Promise(res=>{
+    $("#dlgText").textContent = t;
+    $("#dlgNein").classList.add("hidden");
+    $("#dlgJa").textContent = "OK";
+    const dlg = $("#dlg"); dlg.showModal();
+    $("#dlgJa").onclick = ()=>{ dlg.close(); res(true); };
+  });
+}
+
+/* ---------------- Navigation, Start ---------------- */
+$("#neueListe").onclick = neueListe;
+$("#neuerWagen").onclick = neuerWagen;
+$("#back").onclick = ()=>{
+  if(!$("#viewWagen").classList.contains("hidden")) zeichneListe();
+  else ladeHome();
+};
+$("#themeBtn").onclick = ()=>{
+  const d = document.documentElement;
+  const jetzt = d.getAttribute("data-theme");
+  const dunkel = jetzt ? jetzt==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  d.setAttribute("data-theme", dunkel ? "light" : "dark");
+  try{ localStorage.setItem("theme", dunkel ? "light":"dark"); }catch(e){}
+};
+try{ const t = localStorage.getItem("theme"); if(t) document.documentElement.setAttribute("data-theme", t); }catch(e){}
+
+ladeHome().catch(async e=>{
+  document.querySelector("main").innerHTML =
+    '<div class="card"><h2>Speicher nicht verfügbar</h2><p class="muted">Die App braucht den lokalen Speicher des Browsers. Im privaten Modus funktioniert das nicht immer.</p></div>';
+});
+</script>
+</body>
+</html>
