@@ -108,7 +108,8 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 .farbe{width:34px;height:34px;border-radius:9px;border:2px solid transparent;cursor:pointer}
 .farbe[aria-pressed="true"]{border-color:var(--ink)}
 ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);padding:10px 6px 4px;border-bottom:none;letter-spacing:.3px;text-transform:uppercase}
-.cropwrap{position:relative;display:block;width:100%;touch-action:none;user-select:none}
+.cropwrap{position:relative;display:block;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair}
+.cropwrap img{pointer-events:none;-webkit-user-drag:none}
 .cropbox{position:absolute;border:2px solid var(--red);background:rgba(198,0,24,.14);pointer-events:none;border-radius:4px}
 .kand{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .kand button{font-family:var(--mono);font-weight:700;font-size:14px;padding:8px 10px}
@@ -199,7 +200,7 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
     <div class="card" id="fotoKarte">
       <h2>Foto</h2>
       <div class="cropwrap hidden" id="cropWrap">
-        <img id="vorschau" class="foto" alt="Foto des Wagens">
+        <img id="vorschau" class="foto" alt="Foto des Wagens" draggable="false">
         <div class="cropbox hidden" id="cropBox"></div>
       </div>
       <p class="muted hidden" id="cropTipp">Mit Finger oder Maus ein Rechteck um die Wagennummer ziehen, dann liest die App nur diesen Bereich. Das hilft bei unruhigen Fotos.</p>
@@ -223,7 +224,7 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
     <div class="spalteR">
     <div class="card">
       <h2>Wagennummer</h2>
-      <input id="nummer" class="num" inputmode="numeric" placeholder="31 85 6770 321-6" autocomplete="off">
+      <input id="nummer" class="num" inputmode="numeric" placeholder="12 Ziffern eintippen oder aus Foto lesen" autocomplete="off">
       <div id="nrInfo" class="note hidden"></div>
     </div>
     <div class="card">
@@ -430,6 +431,29 @@ const KATALOG = [
   ["WR","Speisewagen","P","blau"],
   ["D","Gepäckwagen","P","blau"]
 ].map(a=>({c:a[0], t:a[1], g:a[2], f:a[3], eigen:false}));
+
+/* ---------------- Gattung aus Wagennummer ableiten ----------------
+   Schlüssel: Austauschcode (Stelle 1-2) + Serie (Stelle 5-8), z. B. "31|6770".
+   Startwerte aus den bisherigen Listen, danach lernt die App bei jedem Speichern. */
+const SERIE_START = {
+  "99|9351":["Xans","ST-Einheit","blau"], "31|6770":["Fans-u","Aushubwagen","gelb"],
+  "80|9862":["Xas","62-Wagen","grau"],     "80|9852":["Xas","Schwellenwagen","gruen"],
+  "99|9510":["MFS 33","Materialförder- und Siloeinheit","blau"],
+  "99|9552":["MFS 38","Materialförder- und Siloeinheit","violett"],
+  "21|3300":["Ks","Flachwagen","gruen"],   "31|4616":["Smnps","Flachwagen","violett"]
+};
+const serieSchluessel = nr => { const z = (nr||"").replace(/\D/g,""); return z.length >= 8 ? z.slice(0,2)+"|"+z.slice(4,8) : null; };
+function serienHol(){ try{ return JSON.parse(localStorage.getItem("serien")||"{}"); }catch(e){ return {}; } }
+function serieLerne(nr, gc, gt, gf){
+  const k = serieSchluessel(nr); if(!k || !gc) return;
+  const m = serienHol(); m[k] = [gc, gt||"", gf||"grau"];
+  try{ localStorage.setItem("serien", JSON.stringify(m)); }catch(e){}
+}
+function gattungFuer(nr){
+  const k = serieSchluessel(nr); if(!k) return null;
+  const a = serienHol()[k] || SERIE_START[k];
+  return a ? {c:a[0], t:a[1], f:a[2]} : null;
+}
 
 /* ---------------- Speicher ---------------- */
 const DB = (()=>{
@@ -722,9 +746,10 @@ function gatAktivZeichnen(){
   if(wEntwurf.gt) t.appendChild(el("div","gatTxt", wEntwurf.gt));
   box.appendChild(t);
 }
-function waehle(g){
+function waehle(g, auto){
   wEntwurf.gc = g.c; wEntwurf.gt = g.t; wEntwurf.gf = g.f;
-  zuletztMerke(g.c);
+  if(!auto) wEntwurf.gatVonHand = true;
+  if(!auto) zuletztMerke(g.c);
   gatAktivZeichnen(); zuletztZeichnen(); gatListeZeichnen($("#gatSuche").value);
 }
 function zuletztZeichnen(){
@@ -827,7 +852,7 @@ function neuerWagen(){
 async function bearbeite(i){
   wIndex = i;
   const w = aktuell.wagen[i];
-  wEntwurf = {nr:w.nr, gc:w.gc, gt:w.gt, gf:w.gf, bem:w.bem||"", fotoId:w.fotoId, fotoData:null, rect:null};
+  wEntwurf = {nr:w.nr, gc:w.gc, gt:w.gt, gf:w.gf, bem:w.bem||"", fotoId:w.fotoId, fotoData:null, rect:null, gatVonHand:true};
   if(w.fotoId) wEntwurf.fotoData = await DB.foto(w.fotoId);
   fuelleWagen();
 }
@@ -842,7 +867,13 @@ function fuelleWagen(){
   nrPruefen();
   zeige("wagen");
 }
+function gattungAutomatisch(){
+  if(!wEntwurf || wEntwurf.gatVonHand) return;
+  const g = gattungFuer($("#nummer").value);
+  if(g && g.c !== wEntwurf.gc) waehle(g, true);
+}
 function nrPruefen(){
+  gattungAutomatisch();
   const r = pruefe($("#nummer").value);
   const n = $("#nrInfo");
   if(r.ok===null && !$("#nummer").value){ n.classList.add("hidden"); return; }
@@ -929,6 +960,7 @@ $("#speichern").onclick = async ()=>{
     fotoId = null;
   }
   const w = {nr, gc:wEntwurf.gc, gt:wEntwurf.gt, gf:wEntwurf.gf, bem:$("#bem").value.trim(), fotoId};
+  serieLerne(nr, w.gc, w.gt, w.gf);
   if(wIndex<0) aktuell.wagen.push(w); else aktuell.wagen[wIndex]=w;
   await sichere(); zeichneListe();
 };
@@ -990,12 +1022,15 @@ function rechteckZeigen(){
                      w:Math.abs(p.x-start.x), h:Math.abs(p.y-start.y)};
     rechteckZeigen();
   });
-  wrap.addEventListener("pointerup", ()=>{
+  wrap.addEventListener("dragstart", e=>e.preventDefault());
+  const ende = ()=>{
     start = null;
     if(wEntwurf && wEntwurf.rect && (wEntwurf.rect.w < .05 || wEntwurf.rect.h < .02)){
       wEntwurf.rect = null; rechteckZeigen();
     }
-  });
+  };
+  wrap.addEventListener("pointerup", ende);
+  wrap.addEventListener("pointercancel", ende);
 })();
 $("#ganzesBild").onclick = ()=>{ if(wEntwurf){ wEntwurf.rect = null; rechteckZeigen(); } };
 window.addEventListener("resize", rechteckZeigen);
@@ -1489,7 +1524,11 @@ async function massenImport(files){
       melde("#massenInfo","warn",`Nummer ${i+1} von ${neu.length} wird gelesen …`);
       try{
         const r = await liesNummer(neu[i].data, null, f=>{ inner.style.width = Math.round((i+f)/neu.length*100) + "%"; });
-        if(r.sicher){ neu[i].w.nr = formatiere(r.sicher.k); ok++; }
+        if(r.sicher){
+          neu[i].w.nr = formatiere(r.sicher.k); ok++;
+          const g2 = gattungFuer(r.sicher.k);
+          if(g2){ neu[i].w.gc = g2.c; neu[i].w.gt = g2.t; neu[i].w.gf = g2.f; }
+        }
       }catch(e){
         melde("#massenInfo","bad","Lesen nicht möglich: " + e.message);
         break;
