@@ -36,7 +36,22 @@ header.app{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;backgroun
 header.app .bar{height:5px;background:var(--red)}
 header.app .row{display:flex;align-items:center;gap:10px;padding:10px 14px}
 header.app h1{font-size:17px;margin:0;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-main{padding:14px 14px 96px;max-width:900px;margin:0 auto}
+main{padding:14px 14px 96px;max-width:1180px;margin:0 auto}
+.drop{outline:3px dashed var(--red);outline-offset:-6px}
+@media (min-width:900px){
+  main{padding:20px 24px 100px}
+  .zweispaltig{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+  .zweispaltig .spalteL{position:sticky;top:calc(64px + env(safe-area-inset-top,0px))}
+  #viewHome.aktiv{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  #viewHome .voll{grid-column:1 / -1}
+  .gatliste{max-height:420px}
+  .fab{left:auto;right:24px;max-width:340px}
+}
+@media (hover:none){ #fotoDropHinweis, #dropHinweis{display:none} }
+@media (hover:hover){
+  ul.list li:hover{background:var(--bg);cursor:pointer}
+  .gatzeile:hover{background:var(--bg)}
+}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
 h2{font-size:15px;margin:0 0 10px;font-weight:700}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px;font-weight:600}
@@ -115,7 +130,7 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
 <main>
   <!-- Übersicht -->
   <section id="viewHome">
-    <div class="card">
+    <div class="card voll">
       <label for="suche">Suchen</label>
       <input id="suche" placeholder="Bahnhof, Gleis oder Datum" autocomplete="off">
     </div>
@@ -129,7 +144,16 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <ul class="list" id="historie"></ul>
       <div class="empty hidden" id="histLeer">Noch keine abgeschlossenen Listen. Eine Liste wird hier abgelegt, sobald du sie als erledigt markierst.</div>
     </div>
-    <p class="muted">Alle Daten und Fotos bleiben nur auf diesem Gerät. Nichts wird hochgeladen.</p>
+    <div class="card voll">
+      <h2>Sichern und auf anderes Gerät übertragen</h2>
+      <p class="muted" style="margin:0">Alle Daten und Fotos bleiben nur auf diesem Gerät. Mit einer Sicherungsdatei kannst du Listen z. B. vom Handy auf den Laptop übertragen oder vor dem Löschen des Browsers aufbewahren.</p>
+      <div class="btnrow">
+        <button id="exportBtn" class="ghost">Sicherung speichern</button>
+        <button id="importBtn" class="ghost">Sicherung laden</button>
+      </div>
+      <input id="importInput" type="file" accept=".json,application/json" class="hidden">
+      <div id="sichInfo" class="note hidden"></div>
+    </div>
   </section>
 
   <!-- Eine Liste -->
@@ -150,7 +174,7 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
         <div><label for="seiteB">Seite beim letzten Wagen</label><input id="seiteB" placeholder="Zürich"></div>
       </div>
     </div>
-    <div class="card">
+    <div class="card" id="wagenKarte">
       <h2>Wagen <span class="pill" id="anzahl">0</span></h2>
       <div class="side"><span id="lblA">Seite Basel</span><span id="lblB">Seite Zürich</span></div>
       <ul class="list" id="wagen"></ul>
@@ -159,18 +183,26 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
         <button id="pdfBtn" class="primary">PDF erstellen</button>
         <button id="umdrehen" class="ghost">Reihenfolge umdrehen</button>
       </div>
+      <div class="btnrow">
+        <button id="massenBtn" class="ghost">Mehrere Fotos importieren</button>
+      </div>
+      <input id="massenInput" type="file" accept="image/*" multiple class="hidden">
+      <div class="progress hidden" id="massenBar"><div></div></div>
+      <div id="massenInfo" class="note hidden"></div>
+      <p class="muted" id="dropHinweis">Am PC kannst du Fotos auch direkt in dieses Feld ziehen. Sie werden nach Dateiname sortiert angehängt.</p>
     </div>
   </section>
 
   <!-- Wagen erfassen -->
-  <section id="viewWagen" class="hidden">
-    <div class="card">
+  <section id="viewWagen" class="hidden zweispaltig">
+    <div class="spalteL">
+    <div class="card" id="fotoKarte">
       <h2>Foto</h2>
       <div class="cropwrap hidden" id="cropWrap">
         <img id="vorschau" class="foto" alt="Foto des Wagens">
         <div class="cropbox hidden" id="cropBox"></div>
       </div>
-      <p class="muted hidden" id="cropTipp">Mit dem Finger ein Rechteck um die Wagennummer ziehen, dann liest die App nur diesen Bereich. Das ist deutlich zuverlässiger.</p>
+      <p class="muted hidden" id="cropTipp">Mit Finger oder Maus ein Rechteck um die Wagennummer ziehen, dann liest die App nur diesen Bereich. Das hilft bei unruhigen Fotos.</p>
       <div class="btnrow">
         <button id="fotoBtn">Foto aufnehmen</button>
         <button id="galerieBtn" class="ghost">Aus Galerie</button>
@@ -185,7 +217,10 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <div class="progress hidden" id="ocrBar"><div></div></div>
       <div id="ocrInfo" class="note hidden"></div>
       <div class="kand" id="ocrKand"></div>
+      <p class="muted" id="fotoDropHinweis" style="margin-bottom:0">Am PC: Foto hierher ziehen oder mit Strg+V einfügen.</p>
     </div>
+    </div>
+    <div class="spalteR">
     <div class="card">
       <h2>Wagennummer</h2>
       <input id="nummer" class="num" inputmode="numeric" placeholder="31 85 6770 321-6" autocomplete="off">
@@ -207,6 +242,8 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
         <button id="speichern" class="primary">Speichern</button>
         <button id="loeschen" class="ghost">Wagen löschen</button>
       </div>
+      <p class="muted" style="margin-bottom:0">Tastatur: Strg+Enter speichert.</p>
+    </div>
     </div>
   </section>
 </main>
@@ -493,6 +530,7 @@ function wNorm(w){
 /* ---------------- Ansichten ---------------- */
 function zeige(v){
   $("#viewHome").classList.toggle("hidden", v!=="home");
+  $("#viewHome").classList.toggle("aktiv", v==="home");
   $("#viewListe").classList.toggle("hidden", v!=="liste");
   $("#viewWagen").classList.toggle("hidden", v!=="wagen");
   $("#fabHome").classList.toggle("hidden", v!=="home");
@@ -822,15 +860,38 @@ $("#bem").addEventListener("input", e=>{ wEntwurf.bem = e.target.value; });
 
 $("#fotoBtn").onclick = ()=> $("#fotoInput").click();
 $("#galerieBtn").onclick = ()=> $("#galerieInput").click();
-async function fotoGewaehlt(e){
-  const f = e.target.files && e.target.files[0];
-  if(!f) return;
+async function fotoAusDatei(f){
+  if(!f || !/^image\//.test(f.type)) return;
   wEntwurf.fotoData = await verkleinere(f, 1800, .85);
   wEntwurf.rect = null;
   $("#ocrInfo").classList.add("hidden");
   fotoZeigen();
+}
+async function fotoGewaehlt(e){
+  const f = e.target.files && e.target.files[0];
+  await fotoAusDatei(f);
   e.target.value = "";
 }
+function ablegeZone(el, onFiles){
+  el.addEventListener("dragover", e=>{ e.preventDefault(); el.classList.add("drop"); });
+  el.addEventListener("dragleave", ()=> el.classList.remove("drop"));
+  el.addEventListener("drop", e=>{
+    e.preventDefault(); el.classList.remove("drop");
+    const files = [...(e.dataTransfer.files||[])].filter(f=>/^image\//.test(f.type));
+    if(files.length) onFiles(files);
+  });
+}
+ablegeZone($("#fotoKarte"), files=>{ if(wEntwurf) fotoAusDatei(files[0]); });
+document.addEventListener("paste", e=>{
+  if($("#viewWagen").classList.contains("hidden") || !wEntwurf) return;
+  const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(i=>i.type && i.type.startsWith("image/"));
+  if(item){ e.preventDefault(); fotoAusDatei(item.getAsFile()); }
+});
+document.addEventListener("keydown", e=>{
+  if((e.ctrlKey || e.metaKey) && e.key === "Enter" && !$("#viewWagen").classList.contains("hidden")){
+    e.preventDefault(); $("#speichern").click();
+  }
+});
 $("#fotoInput").addEventListener("change", fotoGewaehlt);
 $("#galerieInput").addEventListener("change", fotoGewaehlt);
 $("#fotoWegBtn").onclick = async ()=>{
@@ -940,6 +1001,334 @@ $("#ganzesBild").onclick = ()=>{ if(wEntwurf){ wEntwurf.rect = null; rechteckZei
 window.addEventListener("resize", rechteckZeigen);
 
 /* ---------------- Texterkennung ---------------- */
+/* Kern: eigene Zeilensuche + Bildaufbereitung + Bewertung der UIC-Nummer.
+   Getestet mit 59 echten Wagenfotos. */
+const OCR = (function(){
+/* ===== OCR-Kern: identisch im Browser und im Test ===== */
+function grauAusRGBA(src, rx, ry, rw, rh){
+  const g = new Float32Array(rw*rh), d = src.data, W = src.width;
+  for(let y=0;y<rh;y++) for(let x=0;x<rw;x++){
+    const i = ((ry+y)*W + (rx+x))*4;
+    g[y*rw+x] = .299*d[i] + .587*d[i+1] + .114*d[i+2];
+  }
+  return g;
+}
+function skaliere(g, w, h, nw, nh){
+  const o = new Float32Array(nw*nh);
+  const sx = w/nw, sy = h/nh;
+  if(sx >= 1 && sy >= 1){           // verkleinern: Flächenmittel
+    for(let y=0;y<nh;y++){
+      const y0 = Math.floor(y*sy), y1 = Math.max(y0+1, Math.floor((y+1)*sy));
+      for(let x=0;x<nw;x++){
+        const x0 = Math.floor(x*sx), x1 = Math.max(x0+1, Math.floor((x+1)*sx));
+        let s = 0, n = 0;
+        for(let yy=y0; yy<y1 && yy<h; yy++) for(let xx=x0; xx<x1 && xx<w; xx++){ s += g[yy*w+xx]; n++; }
+        o[y*nw+x] = n ? s/n : 0;
+      }
+    }
+  } else {                          // vergrössern: bilinear
+    for(let y=0;y<nh;y++){
+      const fy = Math.min(h-1.001, Math.max(0,(y+.5)*sy-.5)), y0 = Math.floor(fy), ty = fy-y0;
+      for(let x=0;x<nw;x++){
+        const fx = Math.min(w-1.001, Math.max(0,(x+.5)*sx-.5)), x0 = Math.floor(fx), tx = fx-x0;
+        const a = g[y0*w+x0], b = g[y0*w+x0+1], c = g[(y0+1)*w+x0], d = g[(y0+1)*w+x0+1];
+        o[y*nw+x] = (a*(1-tx)+b*tx)*(1-ty) + (c*(1-tx)+d*tx)*ty;
+      }
+    }
+  }
+  return o;
+}
+function strecke(g){
+  const h = new Uint32Array(256);
+  for(let i=0;i<g.length;i++) h[Math.max(0,Math.min(255,g[i]|0))]++;
+  const n = g.length; let c = 0, lo = 0, hi = 255;
+  for(let i=0;i<256;i++){ c += h[i]; if(c >= n*.01){ lo = i; break; } }
+  c = 0; for(let i=255;i>=0;i--){ c += h[i]; if(c >= n*.01){ hi = i; break; } }
+  const f = 255/Math.max(1,hi-lo);
+  for(let i=0;i<g.length;i++) g[i] = Math.max(0, Math.min(255, (g[i]-lo)*f));
+}
+function sauvola(g, w, h, r, k){
+  const W = w+1, S = new Float64Array(W*(h+1)), Q = new Float64Array(W*(h+1));
+  for(let y=1;y<=h;y++){ let rs=0, rq=0;
+    for(let x=1;x<=w;x++){ const v = g[(y-1)*w+x-1]; rs+=v; rq+=v*v;
+      S[y*W+x] = S[(y-1)*W+x] + rs; Q[y*W+x] = Q[(y-1)*W+x] + rq; } }
+  const o = new Uint8ClampedArray(w*h);
+  for(let y=0;y<h;y++){
+    const y0 = Math.max(0,y-r), y1 = Math.min(h,y+r+1);
+    for(let x=0;x<w;x++){
+      const x0 = Math.max(0,x-r), x1 = Math.min(w,x+r+1);
+      const n = (y1-y0)*(x1-x0);
+      const s = S[y1*W+x1]-S[y0*W+x1]-S[y1*W+x0]+S[y0*W+x0];
+      const q = Q[y1*W+x1]-Q[y0*W+x1]-Q[y1*W+x0]+Q[y0*W+x0];
+      const m = s/n, sd = Math.sqrt(Math.max(0, q/n - m*m));
+      o[y*w+x] = g[y*w+x] > m*(1 + k*(sd/128 - 1)) ? 255 : 0;
+    }
+  }
+  return o;
+}
+function normalisiere(g, w, h, r){
+  const W = w+1, S = new Float64Array(W*(h+1)), Q = new Float64Array(W*(h+1));
+  for(let y=1;y<=h;y++){ let rs=0, rq=0;
+    for(let x=1;x<=w;x++){ const v = g[(y-1)*w+x-1]; rs+=v; rq+=v*v;
+      S[y*W+x] = S[(y-1)*W+x] + rs; Q[y*W+x] = Q[(y-1)*W+x] + rq; } }
+  const o = new Float32Array(w*h);
+  for(let y=0;y<h;y++){
+    const y0 = Math.max(0,y-r), y1 = Math.min(h,y+r+1);
+    for(let x=0;x<w;x++){
+      const x0 = Math.max(0,x-r), x1 = Math.min(w,x+r+1), n = (y1-y0)*(x1-x0);
+      const s = S[y1*W+x1]-S[y0*W+x1]-S[y1*W+x0]+S[y0*W+x0];
+      const q = Q[y1*W+x1]-Q[y0*W+x1]-Q[y1*W+x0]+Q[y0*W+x0];
+      const m = s/n, sd = Math.sqrt(Math.max(0, q/n - m*m));
+      o[y*w+x] = Math.max(0, Math.min(255, 160 + 95*(g[y*w+x]-m)/(sd+8)));
+    }
+  }
+  return o;
+}
+/* rect in Pixeln des Quellbildes; ziel = {breite} oder {hoehe}; Rückgabe RGBA */
+function variante(src, rect, ziel, modus, charH){
+  const rx = Math.max(0, Math.round(rect.x)), ry = Math.max(0, Math.round(rect.y));
+  const rw = Math.max(8, Math.min(src.width-rx,  Math.round(rect.w)));
+  const rh = Math.max(8, Math.min(src.height-ry, Math.round(rect.h)));
+  let g = grauAusRGBA(src, rx, ry, rw, rh);
+  let nw, nh;
+  if(ziel.hoehe){ nh = ziel.hoehe; nw = Math.max(8, Math.round(rw*nh/rh)); }
+  else { nw = ziel.breite; nh = Math.max(8, Math.round(rh*nw/rw)); }
+  if(nw > 3000){ nw = 3000; nh = Math.round(rh*nw/rw); }
+  g = skaliere(g, rw, rh, nw, nh);
+  strecke(g);
+  let o;
+  const r = Math.max(6, Math.round(Math.min(nw,nh)/6));
+  const rn = Math.max(8, Math.round((charH||nh/2)*1.3));
+  if(modus === "normhell"){ const gi = new Float32Array(g.length); for(let i=0;i<g.length;i++) gi[i]=255-g[i]; o = normalisiere(gi, nw, nh, rn); }
+  else if(modus === "normdunkel") o = normalisiere(g, nw, nh, rn);
+  else if(modus === "grau") o = g;
+  else if(modus === "grauinv"){ o = new Float32Array(g.length); for(let i=0;i<g.length;i++) o[i] = 255-g[i]; }
+  else if(modus === "hell"){ const gi = new Float32Array(g.length); for(let i=0;i<g.length;i++) gi[i] = 255-g[i]; o = sauvola(gi, nw, nh, r, .25); }
+  else o = sauvola(g, nw, nh, r, .25);
+  // Balken, Kanten und Flecken entfernen, die nicht wie Schriftzeichen aussehen
+  if(charH && (modus === "hell" || modus === "dunkel")){
+    const lab = komponentenMitLabel(o, nw, nh);
+    const weg = lab.comps.map(c=>{
+      const cw = c.x1-c.x0, ch = c.y1-c.y0;
+      const rand = c.y0 <= 1 || c.y1 >= nh-1;
+      return (rand && ch < charH*.6) || ch > charH*1.6 || cw > charH*2.2 || (ch < charH*.12 && cw < charH*.12) || (rand && cw > charH*1.2);
+    });
+    for(let i=0;i<o.length;i++){ const l = lab.lab[i]; if(l >= 0 && weg[l]) o[i] = 255; }
+  }
+  // weisser Rand, hilft Tesseract bei engen Ausschnitten
+  const pad = Math.round(nh*.15)+6, W2 = nw+2*pad, H2 = nh+2*pad;
+  const out = new Uint8ClampedArray(W2*H2*4).fill(255);
+  for(let y=0;y<nh;y++) for(let x=0;x<nw;x++){
+    const v = o[y*nw+x], i = ((y+pad)*W2 + x+pad)*4;
+    out[i]=out[i+1]=out[i+2]=v;
+  }
+  return {data:out, width:W2, height:H2};
+}
+
+/* ---- UIC-Nummern ---- */
+function pruefziffer(elf){let s=0;for(let i=0;i<elf.length;i++){let v=parseInt(elf[i],10)*(i%2===0?2:1);s+=Math.floor(v/10)+(v%10);}return (10-(s%10))%10;}
+const VERWECHSLUNG = {"0":"689","1":"47","2":"7","3":"85","4":"19","5":"63","6":"508","7":"12","8":"3096","9":"840"};
+const ART  = /^(21|23|31|33|37|43|68|80|81|83|84|86|87|88|99)$/;
+const LAND = /^(85|80|83|84|87|88|86|81|82)$/;
+function kandidatenAus(text){
+  const fix = t => t.replace(/[oODQ]/g,"0").replace(/[lLiI|!\]\[]/g,"1").replace(/[sS]/g,"5")
+                    .replace(/[bB]/g,"8").replace(/[zZ]/g,"2").replace(/[gq]/g,"9");
+  const roh = [];
+  const bewerte = (k, einzeln, anfang, korrigiert) => {
+    const gueltig = pruefziffer(k.slice(0,11)) === parseInt(k[11],10);
+    let sc = gueltig ? 6 : -4;
+    if(ART.test(k.slice(0,2))) sc += 3; else sc -= 3;
+    if(k.slice(2,4) === "85") sc += 3; else if(LAND.test(k.slice(2,4))) sc += 1; else sc -= 3;
+    if(anfang) sc += 2;
+    if(einzeln) sc += 1;
+    if(korrigiert) sc -= 5;
+    return {k, sc, gueltig, korrigiert};
+  };
+  const zeilen = text.split(/\n+/);
+  const quellen = zeilen.map(z=>({z, einzeln:true})).concat([{z:text.replace(/\n/g," "), einzeln:false}]);
+  quellen.forEach(q=>{
+    const woerter = q.z.split(/[\s\-–—,.;:'‘’"“”_]+/).filter(Boolean);
+    const tokens = [];
+    woerter.forEach(w=>{
+      const ziff = (w.match(/\d/g)||[]).length;
+      if(ziff === 0 || ziff / w.length < 0.6) return;
+      const d = fix(w).replace(/\D/g,"");
+      if(d) tokens.push(d);
+    });
+    const d = tokens.join("");
+    const starts = []; let pos = 0;
+    tokens.forEach(t=>{ starts.push(pos); pos += t.length; });
+    for(let i=0;i+12<=d.length;i++){
+      const k = d.slice(i,i+12);
+      const b = bewerte(k, q.einzeln, starts.includes(i), false);
+      roh.push(b);
+      if(!b.gueltig && starts.includes(i) && ART.test(k.slice(0,2)) && LAND.test(k.slice(2,4))){
+        for(let p=0;p<12;p++) for(const alt of (VERWECHSLUNG[k[p]]||"")){
+          const kk = k.slice(0,p) + alt + k.slice(p+1);
+          if(pruefziffer(kk.slice(0,11)) === parseInt(kk[11],10)) roh.push(bewerte(kk, q.einzeln, true, true));
+        }
+      }
+    }
+  });
+  const best = new Map();
+  roh.forEach(r=>{ const b = best.get(r.k); if(!b || r.sc > b.sc) best.set(r.k, r); });
+  return [...best.values()].filter(a=>a.gueltig).sort((a,b)=> b.sc - a.sc);
+}
+
+/* ===== Eigene Zeilensuche: Reihen gleich grosser Zeichen finden ===== */
+function komponentenMitLabel(b, w, h){
+  const lab = new Int32Array(w*h).fill(-1), comps = [], stack = new Int32Array(w*h);
+  for(let s=0;s<w*h;s++){
+    if(b[s] !== 0 || lab[s] !== -1) continue;
+    let sp = 0; stack[sp++] = s; const id = comps.length; lab[s] = id;
+    let x0=w, y0=h, x1=0, y1=0, n=0;
+    while(sp){
+      const p = stack[--sp], x = p % w, y = (p / w) | 0;
+      n++; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+      if(x>0   && b[p-1]===0 && lab[p-1]===-1){ lab[p-1]=id; stack[sp++]=p-1; }
+      if(x<w-1 && b[p+1]===0 && lab[p+1]===-1){ lab[p+1]=id; stack[sp++]=p+1; }
+      if(y>0   && b[p-w]===0 && lab[p-w]===-1){ lab[p-w]=id; stack[sp++]=p-w; }
+      if(y<h-1 && b[p+w]===0 && lab[p+w]===-1){ lab[p+w]=id; stack[sp++]=p+w; }
+    }
+    comps.push({x0,y0,x1:x1+1,y1:y1+1,n});
+  }
+  return {lab, comps};
+}
+function binaer(src, breite, modus){
+  const f = breite / src.width, nh = Math.round(src.height*f);
+  let g = grauAusRGBA(src, 0, 0, src.width, src.height);
+  g = skaliere(g, src.width, src.height, breite, nh);
+  strecke(g);
+  const r = Math.max(6, Math.round(nh/(globalThis.RDIV||12)));
+  let o;
+  if(modus === "hell"){ const gi = new Float32Array(g.length); for(let i=0;i<g.length;i++) gi[i]=255-g[i]; o = sauvola(gi, breite, nh, r, globalThis.KK||.2); }
+  else o = sauvola(g, breite, nh, r, globalThis.KK||.2);
+  return {b:o, w:breite, h:nh, f};
+}
+function komponenten(b, w, h){
+  const lab = new Int32Array(w*h).fill(-1), comps = [], stack = new Int32Array(w*h);
+  for(let s=0;s<w*h;s++){
+    if(b[s] !== 0 || lab[s] !== -1) continue;
+    let sp = 0; stack[sp++] = s; lab[s] = comps.length;
+    let x0=w, y0=h, x1=0, y1=0, n=0;
+    while(sp){
+      const p = stack[--sp], x = p % w, y = (p / w) | 0;
+      n++; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+      if(n > 40000) continue;
+      if(x>0   && b[p-1]===0 && lab[p-1]===-1){ lab[p-1]=comps.length; stack[sp++]=p-1; }
+      if(x<w-1 && b[p+1]===0 && lab[p+1]===-1){ lab[p+1]=comps.length; stack[sp++]=p+1; }
+      if(y>0   && b[p-w]===0 && lab[p-w]===-1){ lab[p-w]=comps.length; stack[sp++]=p-w; }
+      if(y<h-1 && b[p+w]===0 && lab[p+w]===-1){ lab[p+w]=comps.length; stack[sp++]=p+w; }
+    }
+    comps.push({x0,y0,x1:x1+1,y1:y1+1,n});
+  }
+  return comps;
+}
+function ketten(zeichen, f, tag){
+  zeichen.sort((a,b)=>a.x0-b.x0);
+  const out = [], benutzt = new Array(zeichen.length).fill(false);
+  for(let i=0;i<zeichen.length;i++){
+    if(benutzt[i]) continue;
+    const kette = [zeichen[i]]; benutzt[i] = true;
+    let last = zeichen[i];
+    for(let j=i+1;j<zeichen.length;j++){
+      if(benutzt[j]) continue;
+      const c = zeichen[j], hl = last.y1-last.y0, hc = c.y1-c.y0;
+      const gap = c.x0 - last.x1;
+      if(gap > hl*2.2){ if(gap > hl*6) break; else continue; }
+      if(gap < -hl*.3) continue;
+      if(hc/hl > 1.3 || hl/hc > 1.3) continue;
+      if(Math.abs((c.y0+c.y1)/2 - (last.y0+last.y1)/2) > hl*.3) continue;
+      kette.push(c); benutzt[j] = true; last = c;
+    }
+    if(kette.length >= 4){
+      const hs = kette.map(k=>k.y1-k.y0).sort((a,b)=>a-b), hm = hs[hs.length>>1];
+      out.push({x0:Math.min(...kette.map(k=>k.x0))/f, y0:Math.min(...kette.map(k=>k.y0))/f,
+                x1:Math.max(...kette.map(k=>k.x1))/f, y1:Math.max(...kette.map(k=>k.y1))/f,
+                n:kette.length, hz:hm/f, tag, pol: tag.startsWith('hell') ? 'hell' : 'dunkel'});
+    }
+  }
+  return out;
+}
+function zeichenZeilen(src, breite, minH, maxH){
+  minH = minH || .02; maxH = maxH || .16;
+  const f = breite / src.width, h = Math.round(src.height*f), w = breite;
+  let g = grauAusRGBA(src, 0, 0, src.width, src.height);
+  g = skaliere(g, src.width, src.height, w, h);
+  strecke(g);
+  const pruef = c => {
+    const cw = c.x1-c.x0, ch = c.y1-c.y0, fill = c.n/(cw*ch);
+    return ch >= h*minH && ch <= h*maxH && cw >= ch*.1 && cw <= ch*1.05 && fill > .12 && fill < .92;
+  };
+  const b = new Uint8Array(w*h);
+  let alle = [];
+  const stufen = [["hell",[110,140,170,195,215,232]],["dunkel",[40,65,90,120,150]]];
+  for(const [pol, werte] of stufen){
+    for(const t of werte){
+      if(pol === "hell") for(let i=0;i<g.length;i++) b[i] = g[i] >= t ? 0 : 255;
+      else               for(let i=0;i<g.length;i++) b[i] = g[i] <= t ? 0 : 255;
+      alle = alle.concat(ketten(komponenten(b, w, h).filter(pruef), f, pol+t));
+    }
+  }
+  alle.sort((a,b)=>b.n-a.n);
+  const rein = [];
+  alle.forEach(z=>{
+    const gleich = rein.find(r=> Math.min(r.y1,z.y1)-Math.max(r.y0,z.y0) > .5*Math.min(z.y1-z.y0, r.y1-r.y0) &&
+                                 Math.min(r.x1,z.x1)-Math.max(r.x0,z.x0) > .3*Math.min(z.x1-z.x0, r.x1-r.x0));
+    if(gleich){ gleich.x0=Math.min(gleich.x0,z.x0); gleich.x1=Math.max(gleich.x1,z.x1); gleich.stimmen++; gleich[z.pol] = (gleich[z.pol]||0)+1; }
+    else rein.push({...z, stimmen:1, [z.pol]:1});
+  });
+  // Stücke auf gleicher Höhe zusammenführen (z. B. Schatten mitten in der Nummer)
+  for(let i=0;i<rein.length;i++) for(let j=rein.length-1;j>i;j--){
+    const a = rein[i], c = rein[j], hz = Math.max(a.hz, c.hz);
+    const vy = Math.min(a.y1,c.y1)-Math.max(a.y0,c.y0);
+    const gap = Math.max(a.x0,c.x0) - Math.min(a.x1,c.x1);
+    if(vy > .5*Math.min(a.y1-a.y0,c.y1-c.y0) && gap < hz*2.5 && Math.abs(a.hz-c.hz) < hz*.3){
+      a.x0=Math.min(a.x0,c.x0); a.x1=Math.max(a.x1,c.x1); a.y0=Math.min(a.y0,c.y0); a.y1=Math.max(a.y1,c.y1);
+      a.n += c.n; a.stimmen += c.stimmen; rein.splice(j,1);
+    }
+  }
+  rein.forEach(r=> r.wert = r.n + r.stimmen*.5);
+  rein.sort((a,b)=>b.wert-a.wert);
+  return rein;
+}
+function ausschnitt(src, r){
+  const x = Math.max(0, Math.round(r.x)), y = Math.max(0, Math.round(r.y));
+  const w = Math.max(8, Math.min(src.width-x, Math.round(r.w))), h = Math.max(8, Math.min(src.height-y, Math.round(r.h)));
+  const d = new Uint8ClampedArray(w*h*4);
+  for(let yy=0; yy<h; yy++) d.set(src.data.subarray(((y+yy)*src.width + x)*4, ((y+yy)*src.width + x + w)*4), yy*w*4);
+  return {data:d, width:w, height:h};
+}
+/* Leseregionen aus Zeichenzeilen: Einzelzeilen und Stapel (80 / 85 / 9852 914-3) */
+function leseRegionen(zeilen, W, H){
+  const top = zeilen.slice(0, 7), out = [];
+  const polOf = z => (z.hell||0) >= (z.dunkel||0) ? "hell" : "dunkel";
+  top.forEach(z=>{
+    const hz = z.hz, mx = hz*.7, my = hz*.45;
+    out.push({x:z.x0-mx, y:z.y0-my, w:(z.x1-z.x0)+2*mx, h:(z.y1-z.y0)+2*my, hz, zeilen:1, pol:polOf(z)});
+  });
+  top.forEach(z=>{
+    const hz = z.hz, my = hz*.45;
+    out.push({x:z.x0-hz*2, y:z.y0-my, w:(z.x1-z.x0)+hz*6.5, h:(z.y1-z.y0)+2*my, hz, zeilen:1, pol:polOf(z), breit:true});
+  });
+  top.forEach(z=>{
+    const oben = zeilen.filter(o=> o!==z && Math.abs(o.hz-z.hz) < z.hz*.35 && o.y1 <= z.y0 + z.hz*.3 &&
+                                   z.y0 - o.y1 < z.hz*1.2*2.2 && Math.abs(o.x0-z.x0) < z.hz*2.5);
+    if(oben.length){
+      const a = [z, ...oben.slice(0,3)], hz = z.hz;
+      const x0=Math.min(...a.map(v=>v.x0)), y0=Math.min(...a.map(v=>v.y0)), x1=Math.max(...a.map(v=>v.x1)), y1=Math.max(...a.map(v=>v.y1));
+      out.push({x:x0-hz*.7, y:y0-hz*.45, w:(x1-x0)+hz*1.4, h:(y1-y0)+hz*.9, hz, zeilen:a.length, pol:polOf(z)});
+    }
+  });
+  return out.map(r=>{
+    const x = Math.max(0,r.x), y = Math.max(0,r.y);
+    return {...r, x, y, w:Math.min(W-x, r.w), h:Math.min(H-y, r.h)};
+  });
+}
+
+return {variante, kandidatenAus, zeichenZeilen, leseRegionen, ausschnitt};
+})();
+
 let tessLaden = null, ocrWorker = null, ocrLog = ()=>{};
 function ladeTesseract(){
   if(window.Tesseract) return Promise.resolve(window.Tesseract);
@@ -948,7 +1337,7 @@ function ladeTesseract(){
     const s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js";
     s.onload = ()=> res(window.Tesseract);
-    s.onerror = ()=> rej(new Error("Texterkennung konnte nicht geladen werden"));
+    s.onerror = ()=> { tessLaden = null; rej(new Error("Texterkennung konnte nicht geladen werden")); };
     document.head.appendChild(s);
   });
   return tessLaden;
@@ -957,173 +1346,205 @@ async function holWorker(){
   if(ocrWorker) return ocrWorker;
   const T = await ladeTesseract();
   ocrWorker = await T.createWorker("eng", 1, {logger:m=>ocrLog(m)});
-  await ocrWorker.setParameters({
-    tessedit_char_whitelist: "0123456789 -",
-    classify_bln_numeric_mode: "1"
-  });
   return ocrWorker;
 }
 function melde(sel, art, text){
   const n = $(sel); n.className = "note " + art; n.textContent = text; n.classList.remove("hidden");
 }
-/* Bild vorbereiten: Ausschnitt, Graustufen, Otsu-Schwelle, optional invertiert */
-function baueCanvas(dataUrl, rect, modus){
-  return new Promise(res=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const r = rect || {x:0,y:0,w:1,h:1};
-      const sx = Math.round(r.x*img.width),  sy = Math.round(r.y*img.height);
-      const sw = Math.max(20, Math.round(r.w*img.width)), sh = Math.max(20, Math.round(r.h*img.height));
-      const ziel = 2000;
-      const f = Math.min(4, Math.max(1, ziel/sw));
-      const c = document.createElement("canvas");
-      c.width = Math.round(sw*f); c.height = Math.round(sh*f);
-      const g = c.getContext("2d");
-      g.imageSmoothingQuality = "high";
-      g.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
-      const d = g.getImageData(0,0,c.width,c.height), p = d.data;
-      const hist = new Array(256).fill(0);
-      const lum = new Uint8ClampedArray(p.length/4);
-      for(let i=0,j=0;i<p.length;i+=4,j++){
-        const v = Math.round(.299*p[i] + .587*p[i+1] + .114*p[i+2]);
-        lum[j] = v; hist[v]++;
-      }
-      if(modus === "grau"){
-        for(let i=0,j=0;i<p.length;i+=4,j++){ p[i]=p[i+1]=p[i+2]=lum[j]; }
-      } else {
-        // Otsu
-        const ges = lum.length;
-        let summe = 0; for(let i=0;i<256;i++) summe += i*hist[i];
-        let sumB=0, wB=0, best=0, schwelle=128;
-        for(let t=0;t<256;t++){
-          wB += hist[t]; if(!wB) continue;
-          const wF = ges - wB; if(!wF) break;
-          sumB += t*hist[t];
-          const mB = sumB/wB, mF = (summe-sumB)/wF;
-          const z = wB*wF*(mB-mF)*(mB-mF);
-          if(z > best){ best = z; schwelle = t; }
-        }
-        const inv = modus === "invers";
-        for(let i=0,j=0;i<p.length;i+=4,j++){
-          let v = lum[j] > schwelle ? 255 : 0;
-          if(inv) v = 255 - v;
-          p[i]=p[i+1]=p[i+2]=v;
-        }
-      }
-      g.putImageData(d,0,0);
-      res(c);
-    };
-    img.src = dataUrl;
-  });
+function ladeBild(dataUrl){
+  return new Promise((res,rej)=>{ const i = new Image(); i.onload = ()=>res(i); i.onerror = rej; i.src = dataUrl; });
 }
-/* Kandidaten aus dem erkannten Text ziehen und bewerten */
-function kandidatenAus(text){
-  const fix = t => t.replace(/[oODQ]/g,"0").replace(/[lLiI|!]/g,"1").replace(/[sS]/g,"5")
-                    .replace(/[bB]/g,"6").replace(/[zZ]/g,"2").replace(/[gG]/g,"9")
-                    .replace(/[tT]/g,"7").replace(/[aA]/g,"4");
-  const ART  = /^(21|23|31|33|37|43|68|80|81|83|84|86|87|88|99)$/;   // Austauschcode
-  const LAND = /^(85|80|83|84|87|88|86|81|82)$/;                      // Ländercode
-  const roh = [];
-  const zeilen = text.split(/\n+/);
-  const quellen = zeilen.map(z=>({z, einzeln:true})).concat([{z:text.replace(/\n/g," "), einzeln:false}]);
-  quellen.forEach(q=>{
-    const tokens = fix(q.z).match(/\d+/g) || [];
-    const d = tokens.join("");
-    const starts = []; let pos = 0;
-    tokens.forEach(t=>{ starts.push(pos); pos += t.length; });
-    for(let i=0;i+12<=d.length;i++){
-      const k = d.slice(i,i+12);
-      const gueltig = pruefziffer(k.slice(0,11)) === parseInt(k[11],10);
-      let sc = gueltig ? 6 : -4;
-      if(ART.test(k.slice(0,2))) sc += 3;
-      if(k.slice(2,4) === "85") sc += 3; else if(LAND.test(k.slice(2,4))) sc += 1; else sc -= 2;
-      if(starts.includes(i)) sc += 2;
-      if(q.einzeln) sc += 2;
-      roh.push({k, sc, gueltig});
-    }
-  });
-  const best = new Map();
-  roh.forEach(r=>{ const b = best.get(r.k); if(!b || r.sc > b.sc) best.set(r.k, r); });
-  const alle = [...best.values()].sort((a,b)=> b.sc - a.sc);
-  return {
-    gueltig:  alle.filter(a=>a.gueltig).map(a=>a.k),
-    moeglich: alle.filter(a=>!a.gueltig && a.sc >= -1).map(a=>a.k)
+function zuCanvas(v){
+  const c = document.createElement("canvas"); c.width = v.width; c.height = v.height;
+  c.getContext("2d").putImageData(new ImageData(v.data, v.width, v.height), 0, 0);
+  return c;
+}
+/* Liest eine Wagennummer. rectRel = markierter Ausschnitt (0..1) oder null */
+async function liesNummer(fotoData, rectRel, fortschritt){
+  const img = await ladeBild(fotoData);
+  const c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
+  const g = c.getContext("2d", {willReadFrequently:true}); g.drawImage(img, 0, 0);
+  let src = {data: g.getImageData(0,0,c.width,c.height).data, width:c.width, height:c.height};
+  const w = await holWorker();
+  const texte = [], CH = 36;
+  let n = 0; const erwartet = rectRel ? 26 : 30;
+  const lies = async (v, psm) => {
+    n++; fortschritt(Math.min(.97, n/erwartet));
+    await w.setParameters({tessedit_pageseg_mode: psm});
+    const r = await w.recognize(zuCanvas(v));
+    const t = (r.data && r.data.text) || "";
+    texte.push(t);
+    const k = OCR.kandidatenAus(t);
+    return k.length && k[0].sc >= 13 && !k[0].korrigiert ? k : null;
   };
+  const pause = () => new Promise(r=>setTimeout(r,0));
+  let ordnung;
+  if(rectRel){
+    src = OCR.ausschnitt(src, {x:rectRel.x*src.width, y:rectRel.y*src.height, w:rectRel.w*src.width, h:rectRel.h*src.height});
+    const z = OCR.zeichenZeilen(src, Math.min(1000, Math.max(400, src.width)), .12, .95);
+    const regs = OCR.leseRegionen(z, src.width, src.height);
+    ordnung = regs.filter(r=>r.zeilen>1).slice(0,2).concat(regs.filter(r=>r.zeilen===1 && !r.breit).slice(0,4));
+  } else {
+    const z = OCR.zeichenZeilen(src, 1000);
+    const regs = OCR.leseRegionen(z, src.width, src.height);
+    const e = regs.filter(r=>r.zeilen===1 && !r.breit), b = regs.filter(r=>r.breit), m = regs.filter(r=>r.zeilen>1);
+    ordnung = [];
+    for(let i=0;i<7;i++){ if(e[i]) ordnung.push(e[i]); if(b[i]) ordnung.push(b[i]); if(i===2) ordnung.push(...m.slice(0,3)); }
+    ordnung = ordnung.slice(0,14);
+  }
+  await pause();
+  for(const r of ordnung){
+    const modi = r.pol === "hell" ? ["hell","grauinv","normhell"] : ["dunkel","grau","normdunkel"];
+    for(const modus of modi){
+      const v = OCR.variante(src, r, {hoehe: Math.round(r.h*CH/r.hz)}, modus, CH);
+      const k = await lies(v, r.zeilen>1 ? "6" : "7");
+      if(k) return {sicher:k[0], vorschlaege:k};
+    }
+  }
+  if(rectRel){
+    for(const hz of [src.height/1.5, src.height/3, src.height/5]){
+      for(const modus of ["normhell","normdunkel","grauinv","grau"]){
+        const v = OCR.variante(src, {x:0,y:0,w:src.width,h:src.height}, {hoehe: Math.round(src.height*CH/hz)}, modus, CH);
+        const k = await lies(v, hz > src.height/2 ? "7" : "6");
+        if(k) return {sicher:k[0], vorschlaege:k};
+      }
+    }
+  } else {
+    for(const modus of ["grau","hell"]){
+      const v = OCR.variante(src, {x:0,y:0,w:src.width,h:src.height}, {breite:1200}, modus);
+      const k = await lies(v, "6");
+      if(k) return {sicher:k[0], vorschlaege:k};
+    }
+  }
+  const alle = OCR.kandidatenAus(texte.join("\n")).filter(a=>a.sc >= 6);
+  return {sicher:null, vorschlaege:alle};
 }
-function kandidatenZeigen(liste, gueltig){
+function kandidatenZeigen(liste, sicher){
   const box = $("#ocrKand"); box.innerHTML = "";
-  if(liste.length < 2) return;
-  liste.slice(0,6).forEach(k=>{
-    const b = el("button", null, formatiere(k));
+  const zeige = liste.slice(0,6);
+  if(sicher && zeige.length < 2) return;
+  zeige.forEach(k=>{
+    const b = el("button", null, formatiere(k.k));
     b.type = "button";
-    if(gueltig) b.style.borderColor = "var(--ok)";
-    b.onclick = ()=>{ $("#nummer").value = formatiere(k); nrPruefen(); };
+    if(k.sc >= 13 && !k.korrigiert) b.style.borderColor = "var(--ok)";
+    b.onclick = ()=>{ $("#nummer").value = formatiere(k.k); nrPruefen(); };
     box.appendChild(b);
   });
 }
 $("#ocrBtn").onclick = async ()=>{
   if(!wEntwurf || !wEntwurf.fotoData){ melde("#ocrInfo","warn","Zuerst ein Foto aufnehmen."); return; }
   const bar = $("#ocrBar"), inner = bar.firstElementChild;
-  bar.classList.remove("hidden"); inner.style.width = "4%";
+  bar.classList.remove("hidden"); inner.style.width = "3%";
   $("#ocrKand").innerHTML = "";
-  melde("#ocrInfo","warn", wEntwurf.rect
-    ? "Ausschnitt wird gelesen …"
-    : "Ganzes Foto wird gelesen. Tipp: Rechteck um die Nummer ziehen, das trifft besser.");
+  melde("#ocrInfo","warn", wEntwurf.rect ? "Markierter Bereich wird gelesen …" : "Foto wird nach der Wagennummer durchsucht …");
   $("#ocrBtn").disabled = true;
-  const durchgaenge = [
-    {modus:"otsu",   psm:"7"},
-    {modus:"invers", psm:"7"},
-    {modus:"otsu",   psm:"6"},
-    {modus:"invers", psm:"6"},
-    {modus:"grau",   psm:"6"},
-    {modus:"otsu",   psm:"11"}
-  ];
   try{
-    const w = await holWorker();
-    let alleTexte = "", fertig = null, moeglichAlle = [];
-    for(let i=0;i<durchgaenge.length;i++){
-      const d = durchgaenge[i];
-      ocrLog = m => {
-        if(m.status === "recognizing text")
-          inner.style.width = Math.round(((i + m.progress) / durchgaenge.length) * 100) + "%";
-      };
-      const cv = await baueCanvas(wEntwurf.fotoData, wEntwurf.rect, d.modus);
-      await w.setParameters({tessedit_pageseg_mode: d.psm});
-      const r = await w.recognize(cv);
-      const t = (r.data && r.data.text) || "";
-      alleTexte += "\n" + t;
-      const k = kandidatenAus(t);
-      moeglichAlle = moeglichAlle.concat(k.moeglich.filter(x=>!moeglichAlle.includes(x)));
-      if(k.gueltig.length){ fertig = k.gueltig; break; }
-    }
-    if(!fertig){
-      const k = kandidatenAus(alleTexte);
-      if(k.gueltig.length) fertig = k.gueltig;
-    }
-    if(fertig && fertig.length){
-      $("#nummer").value = formatiere(fertig[0]);
+    const r = await liesNummer(wEntwurf.fotoData, wEntwurf.rect, f=>{ inner.style.width = Math.round(f*100)+"%"; });
+    if(r.sicher){
+      $("#nummer").value = formatiere(r.sicher.k);
       nrPruefen();
-      kandidatenZeigen(fertig, true);
-      melde("#ocrInfo","ok", fertig.length > 1
-        ? "Mehrere gültige Nummern gefunden. Unten die richtige antippen und mit dem Foto vergleichen."
-        : "Nummer gelesen, Prüfziffer stimmt. Trotzdem kurz mit dem Foto vergleichen.");
-    } else if(moeglichAlle.length){
-      $("#nummer").value = formatiere(moeglichAlle[0]);
-      nrPruefen();
-      kandidatenZeigen(moeglichAlle, false);
-      melde("#ocrInfo","warn","Gelesen, aber die Prüfziffer stimmt bei keinem Vorschlag. Bitte von Hand korrigieren.");
+      kandidatenZeigen(r.vorschlaege, true);
+      melde("#ocrInfo","ok","Nummer erkannt. Bitte trotzdem kurz mit dem Foto vergleichen.");
+    } else if(r.vorschlaege.length){
+      kandidatenZeigen(r.vorschlaege, false);
+      melde("#ocrInfo","warn","Nicht sicher erkannt. Unten die passende Nummer antippen oder von Hand eintippen. Tipp: Rechteck um die Nummer ziehen und nochmals lesen.");
     } else {
-      melde("#ocrInfo","bad","Keine Wagennummer erkannt. Ziehe ein engeres Rechteck nur um die Nummer oder tippe sie von Hand ein.");
+      melde("#ocrInfo","bad","Keine Wagennummer erkannt. Ziehe ein Rechteck um die Nummer und lies nochmals, oder tippe sie von Hand ein.");
     }
   }catch(err){
-    melde("#ocrInfo","bad","Lesen nicht möglich: " + err.message + ". Nummer bitte von Hand eintippen.");
+    melde("#ocrInfo","bad","Lesen nicht möglich: " + err.message + ". Auf dem Claude-Link ist die Texterkennung gesperrt, auf GitHub Pages funktioniert sie.");
   }finally{
-    ocrLog = ()=>{};
-    $("#ocrBtn").disabled = false;
+    $("#ocrBtn").disabled = !(wEntwurf && wEntwurf.fotoData);
     inner.style.width = "100%";
     setTimeout(()=>bar.classList.add("hidden"), 400);
   }
 };
+
+/* ---------------- Mehrere Fotos importieren ---------------- */
+const natuerlich = (a,b)=> a.name.localeCompare(b.name, "de", {numeric:true, sensitivity:"base"});
+async function massenImport(files){
+  if(!aktuell || !files.length) return;
+  files = [...files].filter(f=>/^image\//.test(f.type)).sort(natuerlich);
+  if(!files.length) return;
+  const letzte = zuletztHol()[0];
+  const g = (letzte && findeGat(letzte)) || KATALOG.find(x=>x.c==="Xas");
+  const bar = $("#massenBar"), inner = bar.firstElementChild;
+  bar.classList.remove("hidden");
+  const neu = [];
+  for(let i=0;i<files.length;i++){
+    melde("#massenInfo","warn",`Foto ${i+1} von ${files.length} wird übernommen …`);
+    inner.style.width = Math.round((i+1)/files.length*100) + "%";
+    const data = await verkleinere(files[i], 1800, .85);
+    const fotoId = uid();
+    await DB.fotoSet(fotoId, data);
+    const w = {nr:"", gc:g.c, gt:g.t, gf:g.f, bem:"", fotoId};
+    aktuell.wagen.push(w); neu.push({w, data});
+  }
+  await sichere(); await zeichneListe();
+  bar.classList.add("hidden");
+  if(await frage(`${files.length} Fotos übernommen. Sollen die Wagennummern jetzt automatisch gelesen werden? Das dauert pro Foto einige Sekunden.`)){
+    bar.classList.remove("hidden");
+    let ok = 0;
+    for(let i=0;i<neu.length;i++){
+      melde("#massenInfo","warn",`Nummer ${i+1} von ${neu.length} wird gelesen …`);
+      try{
+        const r = await liesNummer(neu[i].data, null, f=>{ inner.style.width = Math.round((i+f)/neu.length*100) + "%"; });
+        if(r.sicher){ neu[i].w.nr = formatiere(r.sicher.k); ok++; }
+      }catch(e){
+        melde("#massenInfo","bad","Lesen nicht möglich: " + e.message);
+        break;
+      }
+      await sichere();
+      await zeichneListe();
+    }
+    bar.classList.add("hidden");
+    melde("#massenInfo", ok===neu.length ? "ok" : "warn",
+      `${ok} von ${neu.length} Nummern sicher erkannt. Wagen ohne Nummer antippen und ergänzen.`);
+  } else {
+    melde("#massenInfo","ok",`${files.length} Fotos angehängt. Wagen antippen, um Nummer und Gattung zu ergänzen.`);
+  }
+}
+$("#massenBtn").onclick = ()=> $("#massenInput").click();
+$("#massenInput").addEventListener("change", async e=>{ const f = [...e.target.files]; e.target.value = ""; await massenImport(f); });
+ablegeZone($("#wagenKarte"), files=> massenImport(files));
+
+/* ---------------- Sicherung ---------------- */
+$("#exportBtn").onclick = async ()=>{
+  const alleListen = await DB.alle();
+  const fotos = {};
+  for(const l of alleListen) for(const w of l.wagen){ if(w.fotoId){ const d = await DB.foto(w.fotoId); if(d) fotos[w.fotoId] = d; } }
+  const paket = {app:"wagenliste", version:1, erstellt:new Date().toISOString(),
+                 listen:alleListen, fotos, eigene:(await DB.eigene())};
+  const blob = new Blob([JSON.stringify(paket)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `Wagenliste_Sicherung_${heute()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  melde("#sichInfo","ok",`Sicherung mit ${alleListen.length} Listen und ${Object.keys(fotos).length} Fotos gespeichert.`);
+};
+$("#importBtn").onclick = ()=> $("#importInput").click();
+$("#importInput").addEventListener("change", async e=>{
+  const f = e.target.files && e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  try{
+    const p = JSON.parse(await f.text());
+    if(p.app !== "wagenliste" || !Array.isArray(p.listen)) throw new Error("Das ist keine Wagenliste-Sicherung.");
+    const vorhanden = new Set((await DB.alle()).map(l=>l.id));
+    let neu = 0, ueber = 0;
+    for(const l of p.listen){
+      if(vorhanden.has(l.id)){ ueber++; continue; }
+      for(const w of l.wagen){ if(w.fotoId && p.fotos && p.fotos[w.fotoId]) await DB.fotoSet(w.fotoId, p.fotos[w.fotoId]); }
+      await DB.sichere(l); neu++;
+    }
+    for(const g of (p.eigene||[])) await DB.eigeneSet(g);
+    eigeneGat = (await DB.eigene()).map(x=>({...x, eigen:true}));
+    await ladeHome();
+    melde("#sichInfo","ok",`${neu} Listen geladen` + (ueber ? `, ${ueber} waren schon vorhanden und wurden übersprungen.` : "."));
+  }catch(err){
+    melde("#sichInfo","bad","Laden fehlgeschlagen: " + err.message);
+  }
+});
 
 /* ---------------- PDF ---------------- */
 $("#pdfBtn").onclick = async ()=>{
