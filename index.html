@@ -111,6 +111,17 @@ ul.list li:last-child{border-bottom:none}
 .hidden{display:none !important}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chip{padding:7px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:600;background:var(--bg);cursor:pointer}
+.zustandwahl{display:flex;flex-wrap:wrap;gap:8px}
+.zustandwahl button{flex:1 1 auto;min-width:92px;padding:10px 12px;font-size:14px}
+.zustandwahl button[aria-pressed="true"]{color:#fff;border-color:transparent}
+.zpill{display:inline-block;font-family:var(--font);font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;color:#fff}
+.pillen{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
+.pillen .badge{font-size:11px;padding:1px 8px}
+.bemzeile{display:flex;gap:8px;align-items:stretch}
+.bemzeile input{flex:1}
+.mic{flex:none;width:52px;padding:0;font-size:20px;line-height:1}
+.mic.an{background:var(--red);border-color:var(--red);color:#fff;animation:puls 1.2s infinite}
+@keyframes puls{0%,100%{box-shadow:0 0 0 0 rgba(198,0,24,.45)}50%{box-shadow:0 0 0 8px rgba(198,0,24,0)}}
 .empty{text-align:center;color:var(--mut);padding:26px 10px;font-size:14px}
 .progress{height:6px;background:var(--bg);border-radius:999px;overflow:hidden;margin-top:10px}
 .progress>div{height:100%;width:0;background:var(--red);transition:width .2s}
@@ -233,8 +244,11 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <div class="empty hidden" id="wagenLeer">Noch keine Wagen erfasst.</div>
       <div class="btnrow">
         <button id="pdfBtn" class="primary">PDF erstellen</button>
+        <button id="teilenBtn" class="primary">PDF teilen</button>
         <button id="umdrehen" class="ghost">Reihenfolge umdrehen</button>
       </div>
+      <div id="teilenInfo" class="note hidden"></div>
+      <div class="btnrow hidden" id="teilenNochmal"><button id="teilenJetzt" class="primary">Jetzt teilen</button></div>
       <div class="btnrow">
         <button id="massenBtn" class="ghost">Mehrere Fotos importieren</button>
       </div>
@@ -279,6 +293,10 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <div id="nrInfo" class="note hidden"></div>
     </div>
     <div class="card">
+      <h2>Zustand</h2>
+      <div class="zustandwahl" id="zustandWahl"></div>
+    </div>
+    <div class="card">
       <h2>Länge und Gewicht</h2>
       <div class="drei">
         <div><label for="laenge">Länge (LüP)</label><div class="einheit"><input id="laenge" inputmode="decimal" placeholder="–" autocomplete="off"><span>m</span></div></div>
@@ -299,7 +317,11 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
         <button id="eigeneBtn" class="ghost">Eigene Gattung anlegen</button>
       </div>
       <label for="bem">Bemerkung zu diesem Wagen</label>
-      <input id="bem" placeholder="z. B. beladen mit Schotter, defekt, leer">
+      <div class="bemzeile">
+        <input id="bem" placeholder="z. B. beladen mit Schotter, Bremse defekt">
+        <button id="micBtn" class="ghost mic" type="button" title="Bemerkung diktieren" aria-label="Bemerkung diktieren">🎤</button>
+      </div>
+      <div id="diktatInfo" class="note hidden"></div>
       <div class="btnrow">
         <button id="speichern" class="primary">Speichern</button>
         <button id="loeschen" class="ghost">Wagen löschen</button>
@@ -592,6 +614,16 @@ function zugWerte(W){
   return {anzahl:W.length, laenge, tara, ladung, brutto:tara+ladung, ohneL, ohneT};
 }
 
+/* ---------------- Zustand pro Wagen ---------------- */
+const ZUSTAENDE = {
+  "":       {txt:"Kein",       kurz:"",  farbe:"#5F5E5A"},
+  leer:     {txt:"Leer",       kurz:"L", farbe:"#5F5E5A"},
+  beladen:  {txt:"Beladen",    kurz:"B", farbe:"#185FA5"},
+  schad:    {txt:"Schadwagen", kurz:"S", farbe:"#C60018"},
+  gesperrt: {txt:"Gesperrt",   kurz:"G", farbe:"#B25A12"}
+};
+const zustand = w => ZUSTAENDE[(w && w.zustand) || ""] || ZUSTAENDE[""];
+
 /* ---------------- Speicher ---------------- */
 const DB = (()=>{
   let dbp = null;
@@ -825,11 +857,15 @@ async function zeichneListe(){
     }
     const c = el("div","grow");
     const nrZeile = el("div","nr", w.nr||"ohne Nummer");
-    if(w.pruefen){ const b = el("span","badge pruefen","prüfen"); b.style.marginLeft = "6px"; nrZeile.appendChild(b); }
+    const pillen = el("div","pillen");
+    if(w.zustand){ const z = zustand(w); const b = el("span","zpill", z.txt); b.style.background = z.farbe; pillen.appendChild(b); }
+    if(w.pruefen){ pillen.appendChild(el("span","badge pruefen","Nummer prüfen")); }
+    if(w.zustand === "schad" || w.zustand === "gesperrt"){ p.style.boxShadow = "0 0 0 2px " + zustand(w).farbe; }
     c.appendChild(nrZeile);
     const masse = [typeof w.laenge==="number" ? fmt(w.laenge)+" m" : null,
                    typeof w.tara==="number" ? fmt((w.tara||0)+(w.ladung||0))+" t" : null].filter(Boolean).join(" · ");
     c.appendChild(el("div","sub", [w.gc, w.bem || w.gt, masse].filter(Boolean).join(" · ")));
+    if(pillen.childNodes.length) c.appendChild(pillen);
     li.appendChild(c);
     const up = el("button","iconbtn","↑"); up.onclick = e=>{e.stopPropagation(); tausche(i,i-1);};
     const dn = el("button","iconbtn","↓"); dn.onclick = e=>{e.stopPropagation(); tausche(i,i+1);};
@@ -851,8 +887,12 @@ function zugZeichnen(){
   const h = $("#zugHinweis"), fehlt = [];
   if(z.ohneL) fehlt.push(`${z.ohneL} Wagen ohne Länge`);
   if(z.ohneT) fehlt.push(`${z.ohneT} Wagen ohne Eigengewicht`);
-  if(fehlt.length && z.anzahl){ h.textContent = "Unvollständig: " + fehlt.join(", ") + ". Die Summen zählen nur die erfassten Werte."; h.classList.remove("hidden"); }
-  else h.classList.add("hidden");
+  const schad = aktuell.wagen.filter(w=>w.zustand==="schad").length, gesp = aktuell.wagen.filter(w=>w.zustand==="gesperrt").length;
+  const teile = [];
+  if(schad || gesp) teile.push("Achtung: " + [schad ? `${schad} Schadwagen` : "", gesp ? `${gesp} gesperrt` : ""].filter(Boolean).join(", ") + ".");
+  if(fehlt.length && z.anzahl) teile.push("Unvollständig: " + fehlt.join(", ") + ". Die Summen zählen nur die erfassten Werte.");
+  if(teile.length){ h.textContent = teile.join(" "); h.className = "note " + (schad||gesp ? "bad" : "warn"); }
+  else h.className = "note warn hidden";
 }
 function statusBtn(){
   $("#fertigBtn").textContent = aktuell.status==="fertig" ? "Wieder öffnen" : "Als erledigt markieren";
@@ -1005,14 +1045,14 @@ function neuerWagen(){
   const letzte = zuletztHol()[0];
   const g = (letzte && findeGat(letzte)) || KATALOG.find(x=>x.c==="Xas");
   wEntwurf = {nr:"", gc:g.c, gt:g.t, gf:g.f, bem:"", fotoId:null, fotoData:null, rect:null,
-              laenge:null, tara:null, ladung:null};
+              laenge:null, tara:null, ladung:null, zustand:""};
   fuelleWagen();
 }
 async function bearbeite(i){
   wIndex = i;
   const w = aktuell.wagen[i];
   wEntwurf = {nr:w.nr, gc:w.gc, gt:w.gt, gf:w.gf, bem:w.bem||"", fotoId:w.fotoId, fotoData:null, rect:null, gatVonHand:true, pruefen:!!w.pruefen,
-              laenge:w.laenge??null, tara:w.tara??null, ladung:w.ladung??null, massVonHand:true};
+              laenge:w.laenge??null, tara:w.tara??null, ladung:w.ladung??null, massVonHand:true, zustand:w.zustand||""};
   if(w.fotoId) wEntwurf.fotoData = await DB.foto(w.fotoId);
   fuelleWagen();
 }
@@ -1023,6 +1063,8 @@ function fuelleWagen(){
   $("#tara").value   = wEntwurf.tara ?? "";
   $("#ladung").value = wEntwurf.ladung ?? "";
   $("#massInfo").classList.add("hidden");
+  zustandZeichnen();
+  diktatStopp(); $("#diktatInfo").classList.add("hidden");
   $("#gatSuche").value = "";
   gatAktivZeichnen(); zuletztZeichnen(); gatListeZeichnen("");
   fotoZeigen();
@@ -1031,6 +1073,18 @@ function fuelleWagen(){
   nrPruefen();
   if(wEntwurf.pruefen) melde("#ocrInfo","warn","Diese Nummer wurde automatisch gelesen, aber nicht sicher erkannt. Bitte Ziffer für Ziffer mit dem Foto vergleichen und dann speichern. Damit gilt sie als geprüft.");
   zeige("wagen");
+}
+function zustandZeichnen(){
+  const box = $("#zustandWahl"); box.innerHTML = "";
+  Object.entries(ZUSTAENDE).forEach(([k,z])=>{
+    const b = el("button","ghost", z.txt); b.type = "button";
+    const an = (wEntwurf.zustand||"") === k;
+    b.setAttribute("aria-pressed", String(an));
+    if(an) b.style.background = k ? z.farbe : "var(--mut)";
+    else if(k) { b.style.color = z.farbe; b.style.borderColor = z.farbe; }
+    b.onclick = ()=>{ wEntwurf.zustand = k; zustandZeichnen(); };
+    box.appendChild(b);
+  });
 }
 function gattungAutomatisch(){
   if(!wEntwurf || wEntwurf.gatVonHand) return;
@@ -1066,6 +1120,43 @@ $("#nummer").addEventListener("input", e=>{
   nrPruefen();
 });
 $("#bem").addEventListener("input", e=>{ wEntwurf.bem = e.target.value; });
+
+/* Bemerkung diktieren (Spracherkennung des Browsers) */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let diktat = null;
+function diktatStopp(){ if(diktat){ try{ diktat.abort(); }catch(e){} diktat = null; } $("#micBtn").classList.remove("an"); $("#micBtn").textContent = "🎤"; }
+if(!SR){
+  $("#micBtn").onclick = ()=> melde("#diktatInfo","warn",
+    "Dieser Browser kann nicht selbst diktieren. Tippe ins Feld und nimm das Mikrofon der Handy-Tastatur, das funktioniert genauso.");
+} else {
+  $("#micBtn").onclick = ()=>{
+    if(diktat){ try{ diktat.stop(); }catch(e){} return; }
+    const basis = $("#bem").value.trim();
+    const r = new SR();
+    r.lang = "de-CH"; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    r.onresult = e => {
+      let t = ""; for(let i=0;i<e.results.length;i++) t += e.results[i][0].transcript;
+      t = t.trim(); if(t) t = t.charAt(0).toUpperCase() + t.slice(1);
+      $("#bem").value = (basis ? basis + ", " : "") + t;
+      if(wEntwurf) wEntwurf.bem = $("#bem").value;
+    };
+    r.onerror = e => {
+      const text = {"not-allowed":"Das Mikrofon ist nicht erlaubt. In den Browser-Einstellungen für diese Seite das Mikrofon freigeben.",
+                    "service-not-allowed":"Diktieren ist hier nicht verfügbar. Nimm das Mikrofon der Handy-Tastatur.",
+                    "no-speech":"Nichts gehört. Nochmals auf das Mikrofon tippen und deutlich sprechen.",
+                    "network":"Für das Diktieren braucht es eine Internetverbindung.",
+                    "audio-capture":"Kein Mikrofon gefunden."}[e.error];
+      if(text) melde("#diktatInfo","warn", text);
+    };
+    r.onend = ()=>{ diktat = null; $("#micBtn").classList.remove("an"); $("#micBtn").textContent = "🎤";
+      const n = $("#diktatInfo"); if(n.classList.contains("ok")) n.classList.add("hidden"); };
+    try{
+      r.start(); diktat = r;
+      $("#micBtn").classList.add("an"); $("#micBtn").textContent = "■";
+      melde("#diktatInfo","ok","Sprich jetzt. Zum Beenden nochmals tippen oder einfach aufhören zu sprechen.");
+    }catch(e){ melde("#diktatInfo","bad","Diktieren konnte nicht gestartet werden: " + e.message); }
+  };
+}
 ["laenge","tara"].forEach(id=> $("#"+id).addEventListener("input", ()=>{ if(wEntwurf) wEntwurf.massVonHand = true; $("#massInfo").classList.add("hidden"); }));
 
 $("#fotoBtn").onclick = ()=> $("#fotoInput").click();
@@ -1128,6 +1219,7 @@ function verkleinere(file, max, q){
   });
 }
 $("#speichern").onclick = async ()=>{
+  diktatStopp();
   const nr = formatiere($("#nummer").value);
   if(!nr && !wEntwurf.fotoData){ melde("#ocrInfo","warn","Bitte eine Nummer eingeben oder ein Foto aufnehmen."); return; }
   let fotoId = wEntwurf.fotoId;
@@ -1139,7 +1231,8 @@ $("#speichern").onclick = async ()=>{
     fotoId = null;
   }
   const w = {nr, gc:wEntwurf.gc, gt:wEntwurf.gt, gf:wEntwurf.gf, bem:$("#bem").value.trim(), fotoId,
-             laenge:zahl($("#laenge").value), tara:zahl($("#tara").value), ladung:zahl($("#ladung").value)};
+             laenge:zahl($("#laenge").value), tara:zahl($("#tara").value), ladung:zahl($("#ladung").value),
+             zustand:wEntwurf.zustand||""};
   serieLerne(nr, w.gc, w.gt, w.gf);
   if(w.laenge !== null || w.tara !== null) massLerne(nr, w.laenge, w.tara);
   if(wIndex<0) aktuell.wagen.push(w); else aktuell.wagen[wIndex]=w;
@@ -1931,6 +2024,7 @@ function exportZeilen(){
     "Pos.": i+1, "Wagennummer": w.nr||"", "Gattung": w.gc||"", "Beschreibung": w.gt||"", "Bemerkung": w.bem||"",
     "Länge ü. Puffer (m)": w.laenge ?? null, "Eigengewicht (t)": w.tara ?? null, "Ladung (t)": w.ladung ?? null,
     "Gesamtgewicht (t)": (typeof w.tara==="number" || typeof w.ladung==="number") ? +(((w.tara||0)+(w.ladung||0)).toFixed(2)) : null,
+    "Zustand": w.zustand ? zustand(w).txt : "",
     "Seite": i===0 ? (aktuell.seiteA||"") : (i===n-1 ? (aktuell.seiteB||"") : "")
   }));
 }
@@ -2004,9 +2098,46 @@ $("#pdfBtn").onclick = async ()=>{
   if(!aktuell.wagen.length){ await frageInfo("Die Liste hat noch keine Wagen."); return; }
   const btn = $("#pdfBtn"); btn.disabled = true;
   const alt = btn.textContent; btn.textContent = "PDF wird erstellt …";
-  try{ await bauePdf(); }
+  try{ const r = await bauePdf(); r.doc.save(r.name); }
   catch(e){ await frageInfo("PDF fehlgeschlagen: " + e.message); }
   finally{ btn.disabled = false; btn.textContent = alt; }
+};
+
+/* ---------------- PDF teilen ---------------- */
+let teilenDatei = null;
+const kannTeilen = f => !!(navigator.share && navigator.canShare && navigator.canShare({files:[f]}));
+async function teile(datei){
+  const titel = [aktuell.bahnhof, "Gleis " + (aktuell.gleis||"–")].filter(Boolean).join(" · ") + " – Wagenliste";
+  await navigator.share({files:[datei], title:titel, text:titel + ", " + (aktuell.datum||"").split("-").reverse().join(".")});
+}
+$("#teilenBtn").onclick = async ()=>{
+  if(!aktuell.wagen.length){ await frageInfo("Die Liste hat noch keine Wagen."); return; }
+  const btn = $("#teilenBtn"); btn.disabled = true;
+  const alt = btn.textContent; btn.textContent = "PDF wird erstellt …";
+  $("#teilenInfo").classList.add("hidden"); $("#teilenNochmal").classList.add("hidden");
+  try{
+    const r = await bauePdf();
+    const datei = new File([r.doc.output("blob")], r.name, {type:"application/pdf"});
+    if(!kannTeilen(datei)){
+      r.doc.save(r.name);
+      melde("#teilenInfo","warn","Dieser Browser kann Dateien nicht direkt teilen. Das PDF wurde stattdessen heruntergeladen, du findest es im Download-Ordner.");
+      return;
+    }
+    try{ await teile(datei); }
+    catch(e){
+      if(e.name === "AbortError") return;           // Teilen abgebrochen
+      // Das Erstellen hat zu lange gedauert, der Browser verlangt einen neuen Tipp
+      teilenDatei = datei;
+      melde("#teilenInfo","ok","PDF ist bereit. Tippe auf „Jetzt teilen“.");
+      $("#teilenNochmal").classList.remove("hidden");
+    }
+  }catch(e){ await frageInfo("PDF fehlgeschlagen: " + e.message); }
+  finally{ btn.disabled = false; btn.textContent = alt; }
+};
+$("#teilenJetzt").onclick = async ()=>{
+  if(!teilenDatei) return;
+  try{ await teile(teilenDatei); $("#teilenNochmal").classList.add("hidden"); $("#teilenInfo").classList.add("hidden"); }
+  catch(e){ if(e.name !== "AbortError") melde("#teilenInfo","bad","Teilen nicht möglich: " + e.message); }
 };
 
 async function bauePdf(){
@@ -2084,6 +2215,15 @@ async function bauePdf(){
       doc.setFontSize(gs); doc.text(gc, x+bw/2, y+54, {align:"center"});
       draw("#444441"); doc.setLineWidth(1); fill("#FFFFFF");
       doc.circle(x+14, y+bh+6, 4.5, "FD"); doc.circle(x+bw-14, y+bh+6, 4.5, "FD");
+      if(w.zustand){
+        const z = zustand(w);
+        if(w.zustand === "schad"){ draw(z.farbe); doc.setLineWidth(2.4); doc.roundedRect(x-1, y-1, bw+2, bh+2, 5, 5, "S"); }
+        if(w.zustand === "gesperrt"){ draw(z.farbe); doc.setLineWidth(2); doc.setLineDashPattern([4,3],0);
+          doc.roundedRect(x-1, y-1, bw+2, bh+2, 5, 5, "S"); doc.setLineDashPattern([],0); }
+        fill(z.farbe); doc.circle(x+bw-9, y+9, 6.5, "F");
+        doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(8);
+        doc.text(z.kurz, x+bw-9, y+11.8, {align:"center"});
+      }
     });
     for(let r=0;r<reihen;r++){
       const y = top + r*rowh + bh + 12;
@@ -2099,6 +2239,22 @@ async function bauePdf(){
       text("#C60018"); doc.setFont("helvetica","bold"); doc.setFontSize(11);
       doc.text("Seite " + (aktuell.seiteB||"–"), PW-M-14, y, {align:"right"});
       fill("#C60018"); doc.triangle(PW-M, y-4, PW-M-9, y-8, PW-M-9, y, "F");
+    }
+    // Legende Zustand
+    const zGenutzt = Object.keys(ZUSTAENDE).filter(k=>k && teil.some(w=>w.zustand===k));
+    if(zGenutzt.length){
+      let zx = M; const zy = PH-60;
+      doc.setFontSize(9);
+      zGenutzt.forEach(k=>{
+        const z = ZUSTAENDE[k];
+        fill(z.farbe); doc.circle(zx+6, zy-3, 6, "F");
+        doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(7.5);
+        doc.text(z.kurz, zx+6, zy-0.4, {align:"center"});
+        text("#2C2C2A"); doc.setFont("helvetica","normal"); doc.setFontSize(9);
+        const lab = z.txt + (k==="schad" ? " (rot umrandet)" : k==="gesperrt" ? " (gestrichelt)" : "");
+        doc.text(lab, zx+17, zy);
+        zx += 17 + doc.getStringUnitWidth(lab)*9 + 22;
+      });
     }
     // Legende
     const seen = new Set(); const benutzt = [];
@@ -2152,7 +2308,16 @@ async function bauePdf(){
       if(idx===0)   bem = `Seite ${aktuell.seiteA||"–"}` + (bem?" – "+bem:"");
       if(idx===n-1) bem = `Seite ${aktuell.seiteB||"–"}` + (bem?" – "+bem:"");
       text(idx===0||idx===n-1 ? "#C60018" : "#5F5E5A");
-      doc.text(bem.slice(0,42), cols[7]+6, y);
+      let bx = cols[7]+6;
+      if(w.zustand){
+        const z = zustand(w);
+        doc.setFont("helvetica","bold"); doc.setTextColor(...rgb(z.farbe));
+        doc.text(z.txt, bx, y); bx += doc.getTextWidth(z.txt) + (bem ? 4 : 0);
+        doc.setFont("helvetica","normal");
+        text(idx===0||idx===n-1 ? "#C60018" : "#5F5E5A");
+        if(bem) bem = "· " + bem;
+      }
+      doc.text(bem.slice(0, w.zustand ? 34 : 42), bx, y);
     });
     if(start+proTab >= n){
       const zw = zugWerte(W);
@@ -2185,7 +2350,7 @@ async function bauePdf(){
       doc.setFont("courier","bold"); doc.setFontSize(10);
       doc.text(w.nr||"–", x+70, ytop+13);
       doc.setFont("helvetica","normal"); doc.setFontSize(9);
-      const cap = [w.gc, w.bem || w.gt].filter(Boolean).join(" – ");
+      const cap = [w.gc, w.zustand ? zustand(w).txt : "", w.bem || w.gt].filter(Boolean).join(" – ");
       doc.text(cap.slice(0,44), x+cw-6, ytop+13, {align:"right"});
       let ih = ch-20, iw = ih*4/3;
       if(iw > cw){ iw = cw; ih = cw*3/4; }
@@ -2194,7 +2359,7 @@ async function bauePdf(){
   }
 
   const rein = t => (t||"").replace(/[^A-Za-z0-9ÄÖÜäöü]+/g,"_").replace(/^_|_$/g,"");
-  doc.save([rein(aktuell.bahnhof), "Gleis_"+rein(aktuell.gleis||"x"), "Wagenliste"].filter(Boolean).join("_") + ".pdf");
+  return {doc, name:[rein(aktuell.bahnhof), "Gleis_"+rein(aktuell.gleis||"x"), "Wagenliste"].filter(Boolean).join("_") + ".pdf"};
 }
 
 /* ---------------- Dialoge ---------------- */
@@ -2225,6 +2390,7 @@ $("#nlStart").onclick = listeAnlegen;
 $("#suche").addEventListener("input", homeZeichnen);
 $("#neuerWagen").onclick = neuerWagen;
 $("#back").onclick = ()=>{
+  diktatStopp();
   if(!$("#viewWagen").classList.contains("hidden") || !$("#viewVergleich").classList.contains("hidden")) zeichneListe();
   else ladeHome();
 };
