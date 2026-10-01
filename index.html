@@ -118,6 +118,29 @@ ul.list li:last-child{border-bottom:none}
 .pillen{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
 .pillen .badge{font-size:11px;padding:1px 8px}
 .bemzeile{display:flex;gap:8px;align-items:stretch}
+.kopfzeile2{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.kopfzeile2 h2{margin:0}
+.wahl{width:30px;height:30px;flex:none;border-radius:8px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.wahl.an{background:var(--red);border-color:var(--red)}
+ul.list li.gewaehlt{background:var(--redsoft)}
+.leiste{position:fixed;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));max-width:872px;margin:0 auto;z-index:31;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:10px}
+.leiste .zeile{display:flex;gap:8px;flex-wrap:wrap}
+.leiste .zeile button{flex:1 1 auto}
+.leiste .text{font-weight:700;font-size:14px;margin:0 2px 8px}
+.radio{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-top:8px;cursor:pointer}
+.radio input{width:auto;margin-top:3px}
+.check{display:flex;gap:10px;align-items:center;margin-top:12px;font-size:14px}
+.check input{width:auto}
+.teambadge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#000;color:#fff;margin-left:6px;vertical-align:1px;font-family:var(--font)}
+.konflikt{font-size:12px;color:var(--warn);margin-top:2px}
+.teamcode{font-family:var(--mono);font-size:24px;font-weight:700;letter-spacing:3px}
+.syncpunkt{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.reiter{display:flex;gap:6px;margin-bottom:6px}
+.reiter button{flex:1}
+.reiter button[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+ul.list.verlauf li{display:block}
+.vtxt{font-weight:700;font-size:14px}
 .bemzeile input{flex:1}
 .mic{flex:none;width:52px;padding:0;font-size:20px;line-height:1}
 .mic.an{background:var(--red);border-color:var(--red);color:#fff;animation:puls 1.2s infinite}
@@ -193,6 +216,11 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <ul class="list" id="historie"></ul>
       <div class="empty hidden" id="histLeer">Noch keine abgeschlossenen Listen. Eine Liste wird hier abgelegt, sobald du sie als erledigt markierst.</div>
     </div>
+    <div class="card voll" id="teamKarte">
+      <h2>Team</h2>
+      <div id="teamInhalt"></div>
+      <div id="teamInfo" class="note hidden"></div>
+    </div>
     <div class="card voll">
       <h2>Sichern und auf anderes Gerät übertragen</h2>
       <p class="muted" style="margin:0">Alle Daten und Fotos bleiben nur auf diesem Gerät. Mit einer Sicherungsdatei kannst du Listen z. B. vom Handy auf den Laptop übertragen oder vor dem Löschen des Browsers aufbewahren.</p>
@@ -218,6 +246,10 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
         <div><label for="datum">Datum</label><input id="datum" type="date"></div>
         <div><label>&nbsp;</label><button id="fertigBtn" class="ghost" style="width:100%">Als erledigt markieren</button></div>
       </div>
+      <div id="teamListeZeile" class="hidden" style="margin-top:12px">
+        <div class="muted" id="teamListeInfo"></div>
+        <div class="btnrow"><button id="teamListeBtn" class="ghost">Mit Team teilen</button></div>
+      </div>
       <div class="two">
         <div><label for="seiteA">Seite bei Wagen 1</label><input id="seiteA" placeholder="Basel"></div>
         <div><label for="seiteB">Seite beim letzten Wagen</label><input id="seiteB" placeholder="Zürich"></div>
@@ -237,8 +269,15 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       </div>
       <div id="exportInfo" class="note hidden"></div>
     </div>
+    <div class="card hidden" id="verlaufKarte">
+      <h2>Rangierverlauf</h2>
+      <ul class="list verlauf" id="verlaufListe"></ul>
+    </div>
     <div class="card" id="wagenKarte">
-      <h2>Wagen <span class="pill" id="anzahl">0</span></h2>
+      <div class="kopfzeile2">
+        <h2>Wagen <span class="pill" id="anzahl">0</span></h2>
+        <button id="auswahlBtn" class="ghost small">Rangieren</button>
+      </div>
       <div class="side"><span id="lblA">Seite Basel</span><span id="lblB">Seite Zürich</span></div>
       <ul class="list" id="wagen"></ul>
       <div class="empty hidden" id="wagenLeer">Noch keine Wagen erfasst.</div>
@@ -343,6 +382,14 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
 
 <div class="fab" id="fabHome"><button class="primary" id="neueListe">Neue Liste</button></div>
 <div class="fab hidden" id="fabListe"><button class="primary" id="neuerWagen">Wagen erfassen</button></div>
+<div class="leiste hidden" id="auswahlLeiste">
+  <div class="text" id="auswahlText">Wagen antippen, die verschoben werden sollen</div>
+  <div class="zeile">
+    <button id="auswahlBereich" class="ghost">Bereich füllen</button>
+    <button id="auswahlVerschieben" class="primary">Verschieben …</button>
+    <button id="auswahlAbbruch" class="ghost">Abbrechen</button>
+  </div>
+</div>
 
 <dialog id="dlg"><div class="dlg">
   <p id="dlgText" style="margin:0 0 14px"></p>
@@ -365,9 +412,32 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
     <div><label for="nlA">Seite bei Wagen 1</label><input id="nlA" placeholder="Basel"></div>
     <div><label for="nlB">Seite beim letzten Wagen</label><input id="nlB" placeholder="Zürich"></div>
   </div>
+  <label class="check hidden" id="nlTeamZeile"><input type="checkbox" id="nlTeam" checked> Mit dem Team teilen</label>
   <div class="two" style="margin-top:14px">
     <button id="nlAbbruch" class="ghost">Abbrechen</button>
     <button id="nlStart" class="primary">Liste anlegen</button>
+  </div>
+</div></dialog>
+
+<dialog id="dlgRangier"><div class="dlg">
+  <h2>Wagen verschieben</h2>
+  <p class="muted" id="rgQuelle" style="margin-top:0"></p>
+  <label for="rgZiel">Auf welches Gleis?</label>
+  <select id="rgZiel"></select>
+  <div id="rgNeuFelder" class="hidden">
+    <div class="two">
+      <div><label for="rgBahnhof">Bahnhof</label><input id="rgBahnhof" autocomplete="off"></div>
+      <div><label for="rgGleis">Gleis</label><input id="rgGleis" inputmode="numeric" autocomplete="off"></div>
+    </div>
+  </div>
+  <label>Wo anhängen?</label>
+  <label class="radio"><input type="radio" name="rgWo" value="vorne"> <span id="rgVorneTxt">Vorne</span></label>
+  <label class="radio"><input type="radio" name="rgWo" value="hinten" checked> <span id="rgHintenTxt">Hinten</span></label>
+  <label class="check"><input type="checkbox" id="rgUmdrehen"> Reihenfolge der Gruppe umdrehen</label>
+  <div class="note warn" id="rgVorschau"></div>
+  <div class="two" style="margin-top:14px">
+    <button id="rgAbbruch" class="ghost">Abbrechen</button>
+    <button id="rgStart" class="primary">Verschieben</button>
   </div>
 </div></dialog>
 
@@ -649,7 +719,7 @@ const DB = (()=>{
       const s = t.objectStore(store);
       let out;
       try{ out = fn(s); }catch(e){ rej(e); return; }
-      t.oncomplete = ()=>res(out && out.result !== undefined ? out.result : out);
+      t.oncomplete = ()=>res(out instanceof IDBRequest ? out.result : out);
       t.onerror = ()=>rej(t.error);
     });
   };
@@ -722,6 +792,7 @@ function wNorm(w){
 
 /* ---------------- Ansichten ---------------- */
 function zeige(v){
+  const wechsel = document.body.dataset.ansicht !== v;
   document.body.dataset.ansicht = v;
   $("#viewHome").classList.toggle("hidden", v!=="home");
   $("#viewHome").classList.toggle("aktiv", v==="home");
@@ -729,13 +800,14 @@ function zeige(v){
   $("#viewWagen").classList.toggle("hidden", v!=="wagen");
   $("#viewVergleich").classList.toggle("hidden", v!=="vergleich");
   $("#fabHome").classList.toggle("hidden", v!=="home");
-  $("#fabListe").classList.toggle("hidden", v!=="liste");
+  $("#fabListe").classList.toggle("hidden", v!=="liste" || !!auswahl);
+  $("#auswahlLeiste").classList.toggle("hidden", v!=="liste" || !auswahl);
   $("#back").classList.toggle("hidden", v==="home");
   $("#title").textContent = v==="home" ? "Wagenlisten"
     : v==="liste" ? kopfzeile(aktuell)
     : v==="vergleich" ? "Vergleich"
     : (wIndex>=0 ? "Wagen "+(wIndex+1) : "Neuer Wagen");
-  window.scrollTo(0,0);
+  if(wechsel) window.scrollTo(0,0);
 }
 
 /* ---------------- Übersicht ---------------- */
@@ -762,12 +834,22 @@ function listenZeile(l, mitDatum){
   const g = el("div","grow");
   g.appendChild(el("div","nr", kopfzeile(l)));
   const datum = (l.datum||"").split("-").reverse().join(".");
-  g.appendChild(el("div","sub", `${datum} · ${l.seiteA||"?"} → ${l.seiteB||"?"} · ${l.wagen.length} Wagen`));
+  g.appendChild(el("div","sub", `${datum} · ${l.seiteA||"?"} → ${l.seiteB||"?"} · ${l.wagen.length} Wagen` +
+                               (l.team && l.vonName ? ` · zuletzt ${l.vonName}` : "") + (l.team && l.dirty ? " · noch nicht gesendet" : "")));
+  if(l.team){ const pl = el("div","pillen"); const tb = el("span","teambadge","Team"); tb.style.marginLeft = "0"; pl.appendChild(tb); g.appendChild(pl); }
+  if(l.konflikt) g.appendChild(el("div","konflikt", l.konflikt));
   li.appendChild(g);
   if(l.status==="fertig") { const b = el("span","badge fertig","erledigt"); li.appendChild(b); }
   const del = el("button","iconbtn","🗑"); del.title="Liste löschen";
   del.onclick = async (e)=>{ e.stopPropagation();
-    if(!await frage(`Liste "${kopfzeile(l)}" mit ${l.wagen.length} Wagen löschen?`)) return;
+    if(l.team){
+      if(!Team.bereit()){ await frageInfo("Team-Listen kannst du nur mit Internetverbindung und angemeldet löschen."); return; }
+      if(!await frage(`Team-Liste "${kopfzeile(l)}" löschen? Sie verschwindet für alle im Team.`)) return;
+      const ok = await teamListeLoeschen(l);
+      if(!ok) return;
+    } else {
+      if(!await frage(`Liste "${kopfzeile(l)}" mit ${l.wagen.length} Wagen löschen?`)) return;
+    }
     for(const w of l.wagen){ if(w.fotoId) await DB.fotoWeg(w.fotoId); }
     await DB.weg(l.id); ladeHome();
   };
@@ -812,6 +894,8 @@ function neueListe(){
   $("#nlDatum").value = heute();
   $("#nlA").value = "Basel";
   $("#nlB").value = "Zürich";
+  $("#nlTeamZeile").classList.toggle("hidden", !Team.bereit());
+  if(Team.bereit()) $("#nlTeamZeile").lastChild.textContent = " Mit dem Team „" + Team.aktiv.name + "“ teilen";
   bahnhoefeFuellen();
   $("#dlgNeu").showModal();
   setTimeout(()=>$("#nlGleis").focus(), 120);
@@ -820,7 +904,8 @@ async function listeAnlegen(){
   aktuell = {id:uid(), bahnhof:$("#nlBahnhof").value.trim(), gleis:$("#nlGleis").value.trim(),
              datum:$("#nlDatum").value||heute(), seiteA:$("#nlA").value.trim()||"Basel",
              seiteB:$("#nlB").value.trim()||"Zürich", status:"offen", wagen:[], geaendert:Date.now()};
-  await DB.sichere(aktuell);
+  if(Team.bereit() && $("#nlTeam").checked){ aktuell.team = Team.aktiv.id; aktuell.sv = 0; }
+  aktuell = await speichereListe(aktuell);
   listen = await DB.alle();
   $("#dlgNeu").close();
   await zeichneListe();
@@ -867,14 +952,25 @@ async function zeichneListe(){
     c.appendChild(el("div","sub", [w.gc, w.bem || w.gt, masse].filter(Boolean).join(" · ")));
     if(pillen.childNodes.length) c.appendChild(pillen);
     li.appendChild(c);
-    const up = el("button","iconbtn","↑"); up.onclick = e=>{e.stopPropagation(); tausche(i,i-1);};
-    const dn = el("button","iconbtn","↓"); dn.onclick = e=>{e.stopPropagation(); tausche(i,i+1);};
-    li.appendChild(up); li.appendChild(dn);
-    li.onclick = e=>{ if(e.target===up||e.target===dn) return; bearbeite(i); };
+    if(auswahl){
+      const an = auswahl.has(i);
+      const k = el("div","wahl" + (an ? " an" : ""), an ? "✓" : "");
+      li.appendChild(k);
+      if(an) li.classList.add("gewaehlt");
+      li.onclick = ()=>{ if(auswahl.has(i)) auswahl.delete(i); else auswahl.add(i); zeichneListe(); };
+    } else {
+      const up = el("button","iconbtn","↑"); up.onclick = e=>{e.stopPropagation(); tausche(i,i-1);};
+      const dn = el("button","iconbtn","↓"); dn.onclick = e=>{e.stopPropagation(); tausche(i,i+1);};
+      li.appendChild(up); li.appendChild(dn);
+      li.onclick = e=>{ if(e.target===up||e.target===dn) return; bearbeite(i); };
+    }
     ul.appendChild(li);
   });
   statusBtn();
   zugZeichnen();
+  teamListeZeichnen();
+  verlaufZeichnen();
+  auswahlTextZeichnen();
   zeige("liste");
 }
 function zugZeichnen(){
@@ -902,7 +998,34 @@ async function tausche(a,b){
   const t = aktuell.wagen[a]; aktuell.wagen[a]=aktuell.wagen[b]; aktuell.wagen[b]=t;
   await sichere(); zeichneListe();
 }
-async function sichere(){ aktuell.geaendert = Date.now(); await DB.sichere(aktuell); }
+async function sichere(){ aktuell = await speichereListe(aktuell); }
+/* Jede Änderung an einer Liste läuft hier durch. Team-Listen werden danach gesendet.
+   l.sv = Team-Version, auf der diese Fassung beruht. */
+async function speichereListe(l){
+  if(l.team){
+    const db = await DB.hol(l.id);
+    if(db && db.team === l.team && (db.sv||0) > (l.sv||0)){
+      if(db.svDurchPush){
+        l.sv = db.sv; l.svDurchPush = true; l.vonName = db.vonName;      // eigenes Senden hat die Version erhöht
+      } else {
+        // Ein Kollege hat die Liste inzwischen geändert: eigene Fassung als Konfliktkopie sichern
+        const kopie = listeDaten(l);
+        kopie.id = uid(); kopie.geaendert = Date.now();
+        kopie.konflikt = `Konfliktkopie: ${db.vonName || "ein Kollege"} hat diese Liste gleichzeitig geändert. Bitte vergleichen und dann löschen.`;
+        await DB.sichere(kopie);
+        teamMeldung("warn", `„${kopfzeile(l)}“ wurde inzwischen von ${db.vonName || "einem Kollegen"} geändert. Die Team-Fassung gilt, deine Änderung liegt als Konfliktkopie bei den offenen Listen.`);
+        await frageInfo(`Diese Liste wurde inzwischen von ${db.vonName || "einem Kollegen"} geändert. Deine Änderung ist als Konfliktkopie bei den offenen Listen gespeichert, angezeigt wird jetzt die aktuelle Team-Fassung.`);
+        db.wagen = db.wagen.map(wNorm);
+        return db;
+      }
+    }
+    l.dirty = true;
+  }
+  l.geaendert = Date.now();
+  await DB.sichere(l);
+  if(l.team) pushPlanen(l.id);
+  return l;
+}
 
 ["bahnhof","gleis","datum","seiteA","seiteB"].forEach(id=>{
   $("#"+id).addEventListener("change", async ()=>{
@@ -1164,6 +1287,7 @@ $("#galerieBtn").onclick = ()=> $("#galerieInput").click();
 async function fotoAusDatei(f){
   if(!f || !/^image\//.test(f.type)) return;
   wEntwurf.fotoData = await verkleinere(f, 1800, .85);
+  wEntwurf.fotoNeu = true;
   wEntwurf.rect = null;
   $("#ocrInfo").classList.add("hidden");
   fotoZeigen();
@@ -1224,10 +1348,13 @@ $("#speichern").onclick = async ()=>{
   if(!nr && !wEntwurf.fotoData){ melde("#ocrInfo","warn","Bitte eine Nummer eingeben oder ein Foto aufnehmen."); return; }
   let fotoId = wEntwurf.fotoId;
   if(wEntwurf.fotoData){
-    fotoId = fotoId || uid();
+    if(wEntwurf.fotoNeu || !fotoId){
+      if(fotoId){ await DB.fotoWeg(fotoId); teamFotoWeg(aktuell, fotoId); }
+      fotoId = uid();
+    }
     await DB.fotoSet(fotoId, wEntwurf.fotoData);
   } else if(fotoId){
-    await DB.fotoWeg(fotoId);
+    await DB.fotoWeg(fotoId); teamFotoWeg(aktuell, fotoId);
     fotoId = null;
   }
   const w = {nr, gc:wEntwurf.gc, gt:wEntwurf.gt, gf:wEntwurf.gf, bem:$("#bem").value.trim(), fotoId,
@@ -1242,7 +1369,7 @@ $("#loeschen").onclick = async ()=>{
   if(wIndex<0) return;
   if(!await frage("Diesen Wagen aus der Liste löschen?")) return;
   const w = aktuell.wagen[wIndex];
-  if(w.fotoId) await DB.fotoWeg(w.fotoId);
+  if(w.fotoId){ await DB.fotoWeg(w.fotoId); teamFotoWeg(aktuell, w.fotoId); }
   aktuell.wagen.splice(wIndex,1);
   await sichere(); zeichneListe();
 };
@@ -1911,6 +2038,7 @@ $("#importInput").addEventListener("change", async e=>{
     for(const l of p.listen){
       if(vorhanden.has(l.id)){ ueber++; continue; }
       for(const w of l.wagen){ if(w.fotoId && p.fotos && p.fotos[w.fotoId]) await DB.fotoSet(w.fotoId, p.fotos[w.fotoId]); }
+      if(l.team){ delete l.team; delete l.sv; delete l.dirty; delete l.vonName; }
       await DB.sichere(l); neu++;
     }
     for(const g of (p.eigene||[])) await DB.eigeneSet(g);
@@ -1926,6 +2054,556 @@ $("#importInput").addEventListener("change", async e=>{
     melde("#sichInfo","bad","Laden fehlgeschlagen: " + err.message);
   }
 });
+
+/* ===================================================================
+   RANGIEREN: Wagengruppe auf ein anderes Gleis verschieben
+   =================================================================== */
+let auswahl = null;   // Set mit Positionen (0-basiert) oder null
+function auswahlTextZeichnen(){
+  if(!auswahl) return;
+  const idx = [...auswahl].sort((a,b)=>a-b);
+  $("#auswahlText").textContent = idx.length
+    ? `${idx.length} Wagen ausgewählt (Position ${idx.map(i=>i+1).join(", ").replace(/^(.{40}).+$/, "$1 …")})`
+    : "Wagen antippen, die verschoben werden sollen";
+  $("#auswahlVerschieben").disabled = !idx.length;
+  $("#auswahlBereich").disabled = idx.length < 2;
+}
+$("#auswahlBtn").onclick = ()=>{
+  if(!aktuell.wagen.length){ frageInfo("Die Liste hat noch keine Wagen."); return; }
+  auswahl = auswahl ? null : new Set();
+  zeichneListe();
+};
+$("#auswahlAbbruch").onclick = ()=>{ auswahl = null; zeichneListe(); };
+$("#auswahlBereich").onclick = ()=>{
+  const idx = [...auswahl]; if(idx.length < 2) return;
+  for(let i=Math.min(...idx); i<=Math.max(...idx); i++) auswahl.add(i);
+  zeichneListe();
+};
+let rgZiele = [];
+$("#auswahlVerschieben").onclick = async ()=>{
+  if(!auswahl || !auswahl.size) return;
+  const alle = (await DB.alle()).filter(l=>l.id !== aktuell.id && l.status !== "fertig");
+  const gleicherBhf = l => (l.bahnhof||"") === (aktuell.bahnhof||"");
+  rgZiele = alle.sort((a,b)=> (gleicherBhf(b)-gleicherBhf(a)) || String(a.gleis||"").localeCompare(String(b.gleis||""), "de", {numeric:true}));
+  const sel = $("#rgZiel"); sel.innerHTML = "";
+  rgZiele.forEach(l=>{
+    const o = document.createElement("option"); o.value = l.id;
+    o.textContent = `${kopfzeile(l)} · ${l.wagen.length} Wagen` + (l.team ? " · Team" : "");
+    sel.appendChild(o);
+  });
+  const o = document.createElement("option"); o.value = "__neu"; o.textContent = "Neues Gleis anlegen …"; sel.appendChild(o);
+  if(!rgZiele.length) sel.value = "__neu";
+  $("#rgBahnhof").value = aktuell.bahnhof || ""; $("#rgGleis").value = "";
+  $("#rgUmdrehen").checked = false;
+  const idx = [...auswahl].sort((a,b)=>a-b);
+  $("#rgQuelle").textContent = `${idx.length} Wagen von ${kopfzeile(aktuell)}, Position ${idx.map(i=>i+1).join(", ")}`;
+  rgVorschau();
+  $("#dlgRangier").showModal();
+};
+async function rgZielListe(){
+  const v = $("#rgZiel").value;
+  if(v === "__neu") return {id:null, bahnhof:$("#rgBahnhof").value.trim(), gleis:$("#rgGleis").value.trim(),
+                            seiteA:aktuell.seiteA, seiteB:aktuell.seiteB, wagen:[]};
+  return rgZiele.find(l=>l.id === v);
+}
+async function rgVorschau(){
+  const z = await rgZielListe();
+  $("#rgNeuFelder").classList.toggle("hidden", $("#rgZiel").value !== "__neu");
+  $("#rgVorneTxt").textContent  = `Vorne anhängen, Seite ${z.seiteA||"–"} (vor Wagen 1)`;
+  $("#rgHintenTxt").textContent = `Hinten anhängen, Seite ${z.seiteB||"–"} (nach dem letzten Wagen)`;
+  const n = auswahl ? auswahl.size : 0, wo = document.querySelector('input[name="rgWo"]:checked').value;
+  const zielName = $("#rgZiel").value === "__neu" ? [z.bahnhof, z.gleis ? "Gleis " + z.gleis : "neues Gleis"].filter(Boolean).join(" · ") : kopfzeile(z);
+  const pos = wo === "vorne" ? `als Wagen 1 bis ${n}` : `als Wagen ${z.wagen.length+1} bis ${z.wagen.length+n}`;
+  $("#rgVorschau").textContent = `${n} Wagen werden auf ${zielName} verschoben, ${pos}` +
+    ($("#rgUmdrehen").checked ? ", in umgekehrter Reihenfolge." : ".") + ` Auf ${kopfzeile(aktuell)} bleiben ${aktuell.wagen.length - n} Wagen.`;
+}
+["rgZiel","rgGleis","rgBahnhof","rgUmdrehen"].forEach(id=> $("#"+id).addEventListener("input", rgVorschau));
+document.querySelectorAll('input[name="rgWo"]').forEach(r=> r.addEventListener("change", rgVorschau));
+$("#rgAbbruch").onclick = ()=> $("#dlgRangier").close();
+$("#rgStart").onclick = async ()=>{
+  const v = $("#rgZiel").value;
+  if(v === "__neu" && !$("#rgGleis").value.trim()){ $("#rgGleis").focus(); return; }
+  const wo = document.querySelector('input[name="rgWo"]:checked').value;
+  const idx = [...auswahl].sort((a,b)=>a-b);
+  let gruppe = idx.map(i=>aktuell.wagen[i]);
+  if($("#rgUmdrehen").checked) gruppe = gruppe.slice().reverse();
+  let ziel;
+  if(v === "__neu"){
+    ziel = {id:uid(), bahnhof:$("#rgBahnhof").value.trim(), gleis:$("#rgGleis").value.trim(), datum:heute(),
+            seiteA:aktuell.seiteA, seiteB:aktuell.seiteB, status:"offen", wagen:[], geaendert:Date.now()};
+    if(aktuell.team){ ziel.team = aktuell.team; ziel.sv = 0; }
+  } else {
+    ziel = await DB.hol(v);
+    ziel.wagen = ziel.wagen.map(wNorm);
+  }
+  ziel.wagen = wo === "vorne" ? gruppe.concat(ziel.wagen) : ziel.wagen.concat(gruppe);
+  const nummern = gruppe.map(w=>w.nr || "ohne Nummer");
+  const t = Date.now();
+  aktuell.wagen = aktuell.wagen.filter((w,i)=>!auswahl.has(i));
+  (aktuell.verlauf = aktuell.verlauf || []).push({t, art:"ab", anzahl:gruppe.length, gegen:kopfzeile(ziel), nummern});
+  (ziel.verlauf = ziel.verlauf || []).push({t, art:"zu", anzahl:gruppe.length, gegen:kopfzeile(aktuell), wo, nummern});
+  ziel = await speichereListe(ziel);
+  aktuell = await speichereListe(aktuell);
+  $("#dlgRangier").close();
+  auswahl = null;
+  await zeichneListe();
+  zuletztVerschoben = ziel.id;
+  melde("#teilenInfo","ok", `${gruppe.length} Wagen auf ${kopfzeile(ziel)} verschoben.`);
+  $("#teilenNochmal").classList.add("hidden");
+  const b = el("button","ghost small","Zu " + kopfzeile(ziel) + " wechseln"); b.style.marginTop = "8px"; b.style.display = "block";
+  b.onclick = ()=> oeffne(ziel.id);
+  $("#teilenInfo").appendChild(b);
+};
+let zuletztVerschoben = null;
+function verlaufZeichnen(){
+  const v = (aktuell.verlauf || []).slice(-10).reverse();
+  $("#verlaufKarte").classList.toggle("hidden", !v.length);
+  const ul = $("#verlaufListe"); ul.innerHTML = "";
+  v.forEach(e=>{
+    const d = new Date(e.t);
+    const zeit = d.toLocaleDateString("de-CH", {day:"2-digit", month:"2-digit"}) + " " + d.toLocaleTimeString("de-CH", {hour:"2-digit", minute:"2-digit"});
+    const li = el("li");
+    li.appendChild(el("div","vtxt", e.art === "ab"
+      ? `${e.anzahl} Wagen abgehängt → ${e.gegen}`
+      : `${e.anzahl} Wagen zugestellt von ${e.gegen}` + (e.wo === "vorne" ? " (vorne)" : " (hinten)")));
+    li.appendChild(el("div","sub", zeit + " · " + (e.nummern||[]).join(", ")));
+    ul.appendChild(li);
+  });
+}
+
+/* ===================================================================
+   TEAM: Listen über Supabase mit Kollegen teilen
+   Lokal bleibt die Arbeitskopie, Team-Listen werden zusätzlich gesendet.
+   =================================================================== */
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
+const LOKALE_FELDER = ["team","sv","dirty","konflikt","vonName","svDurchPush"];
+const Team = {
+  sb:null, user:null, teams:[], aktiv:null, mitglieder:[], kanal:null,
+  sync:{zustand:"aus", text:"", zeit:null},
+  konfig(){ try{ return JSON.parse(localStorage.getItem("teamKonfig")||"null"); }catch(e){ return null; } },
+  name(){ const u = this.user; return (u && u.user_metadata && u.user_metadata.name) || (u && u.email ? u.email.split("@")[0] : "Unbekannt"); },
+  bereit(){ return !!(this.sb && this.user && this.aktiv); },
+  async ladeBibliothek(){
+    if(window.supabase && window.supabase.createClient) return;
+    await new Promise((res,rej)=>{
+      const s = document.createElement("script"); s.src = SUPABASE_JS;
+      s.onload = res; s.onerror = ()=> rej(new Error("Supabase-Baustein konnte nicht geladen werden (Internet?)"));
+      document.head.appendChild(s);
+    });
+  },
+  async start(){
+    const k = this.konfig(); if(!k) return;
+    await this.ladeBibliothek();
+    this.sb = window.supabase.createClient(k.url, k.key, {auth:{persistSession:true, autoRefreshToken:true, storageKey:"wl-team-auth"}});
+    const {data} = await this.sb.auth.getSession();
+    this.user = data && data.session ? data.session.user : null;
+    this.sb.auth.onAuthStateChange((ev, sess)=>{
+      const vorher = this.user && this.user.id;
+      this.user = sess ? sess.user : null;
+      if((this.user && this.user.id) !== vorher){ this.teamsLaden().then(()=>{ teamZeichnen(); syncAlles(); }); }
+    });
+    if(this.user){ await this.teamsLaden(); }
+    teamZeichnen();
+    if(this.bereit()) await syncAlles();
+  },
+  async teamsLaden(){
+    this.teams = []; this.aktiv = null; this.mitglieder = [];
+    this.abmeldenKanal();
+    if(!this.user) return;
+    const {data, error} = await this.sb.from("wl_mitglieder").select("team_id, rolle, wl_teams(id, name, beitrittscode)").eq("user_id", this.user.id);
+    if(error){ teamMeldung("bad", "Teams konnten nicht geladen werden: " + error.message); return; }
+    this.teams = (data||[]).map(r=>({...r.wl_teams, rolle:r.rolle})).filter(t=>t && t.id);
+    const gemerkt = localStorage.getItem("teamAktiv");
+    this.aktiv = this.teams.find(t=>t.id === gemerkt) || this.teams[0] || null;
+    if(this.aktiv){
+      localStorage.setItem("teamAktiv", this.aktiv.id);
+      const m = await this.sb.from("wl_mitglieder").select("user_id, anzeigename, rolle").eq("team_id", this.aktiv.id);
+      this.mitglieder = m.data || [];
+      this.abonnieren();
+    }
+  },
+  abonnieren(){
+    if(!this.sb || !this.aktiv || !this.sb.channel) return;
+    this.abmeldenKanal();
+    this.kanal = this.sb.channel("wl-" + this.aktiv.id)
+      .on("postgres_changes", {event:"*", schema:"public", table:"wl_listen", filter:"team_id=eq." + this.aktiv.id}, ()=> holenPlanen())
+      .subscribe();
+  },
+  abmeldenKanal(){ if(this.kanal && this.sb){ try{ this.sb.removeChannel(this.kanal); }catch(e){} } this.kanal = null; }
+};
+function teamMeldung(art, text){ if(!text){ $("#teamInfo").classList.add("hidden"); return; } melde("#teamInfo", art, text); }
+function syncSetzen(zustand, text){
+  Team.sync = {zustand, text:text||"", zeit: zustand==="ok" ? new Date() : Team.sync.zeit};
+  const z = $("#teamSyncZeile"); if(z) z.innerHTML = syncHtml();
+  teamListeZeichnen();
+}
+function syncHtml(){
+  const f = {ok:"var(--ok)", sende:"var(--warn)", fehler:"var(--red)", aus:"var(--mut)"}[Team.sync.zustand] || "var(--mut)";
+  const t = Team.sync.zustand === "ok" ? "Synchronisiert " + (Team.sync.zeit ? Team.sync.zeit.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"}) : "")
+          : Team.sync.zustand === "sende" ? "Wird synchronisiert …"
+          : Team.sync.zustand === "fehler" ? "Nicht synchronisiert: " + Team.sync.text : "Offline";
+  return `<span class="syncpunkt" style="background:${f}"></span>${t.replace(/</g,"&lt;")}`;
+}
+
+/* ---------- Einladungslink ---------- */
+function einladungPruefen(){
+  const h = location.hash || "";
+  if(!h.startsWith("#einladung=")) return;
+  try{
+    const e = JSON.parse(decodeURIComponent(escape(atob(h.slice(11).replace(/-/g,"+").replace(/_/g,"/")))));
+    if(e.url && e.key){
+      localStorage.setItem("teamKonfig", JSON.stringify({url:e.url, key:e.key}));
+      if(e.code) localStorage.setItem("teamCode", e.code);
+      teamMeldung("ok", `Einladung für das Team ${e.name ? "„" + e.name + "“ " : ""}übernommen. Melde dich jetzt an oder erstelle ein Konto.`);
+    }
+  }catch(err){ teamMeldung("bad", "Der Einladungslink ist ungültig."); }
+  history.replaceState(null, "", location.pathname + location.search);
+}
+function einladungsLink(){
+  const k = Team.konfig(); if(!k || !Team.aktiv) return "";
+  const json = JSON.stringify({url:k.url, key:k.key, code:Team.aktiv.beitrittscode, name:Team.aktiv.name});
+  const b = btoa(unescape(encodeURIComponent(json))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return location.origin + location.pathname + "#einladung=" + b;
+}
+
+/* ---------- Team-Karte auf der Startseite ---------- */
+let teamReiter = "anmelden";
+function feld(id, label, typ, wert, ph){
+  return `<label for="${id}">${label}</label><input id="${id}" type="${typ||"text"}" value="${(wert||"").replace(/"/g,"&quot;")}" placeholder="${ph||""}" autocomplete="off">`;
+}
+function teamZeichnen(){
+  const box = $("#teamInhalt"); if(!box) return;
+  const k = Team.konfig();
+  if(!k){
+    box.innerHTML = `<p class="muted" style="margin:0">Listen mit Kollegen teilen: Geteilte Listen liegen zusätzlich in eurer Datenbank, alle im Team sehen die gleichen Gleise.
+      Am einfachsten öffnest du den <b>Einladungslink</b>, den du vom Team-Admin bekommst. Als Admin trägst du hier die Angaben deines Supabase-Projekts ein.</p>
+      ${feld("tkUrl","Supabase-Adresse","url","","https://xxxx.supabase.co")}
+      ${feld("tkKey","Anon-Key (öffentlicher Schlüssel)","text","","eyJ…")}
+      <div class="btnrow"><button id="tkVerbinden" class="primary">Verbinden</button></div>`;
+    $("#tkVerbinden").onclick = async ()=>{
+      const url = $("#tkUrl").value.trim().replace(/\/+$/,""), key = $("#tkKey").value.trim();
+      if(!/^https?:\/\//.test(url) || key.length < 20){ teamMeldung("warn","Bitte Adresse und Anon-Key vollständig eintragen."); return; }
+      localStorage.setItem("teamKonfig", JSON.stringify({url, key}));
+      teamMeldung(null);
+      try{ await Team.start(); }catch(e){ teamMeldung("bad", e.message); }
+      teamZeichnen();
+    };
+    return;
+  }
+  if(!Team.sb){
+    box.innerHTML = `<p class="muted" style="margin:0">Verbindung wird aufgebaut …</p>`;
+    return;
+  }
+  if(!Team.user){
+    const reg = teamReiter === "registrieren";
+    box.innerHTML = `<div class="reiter"><button id="tkR1" class="ghost small" aria-pressed="${!reg}">Anmelden</button><button id="tkR2" class="ghost small" aria-pressed="${reg}">Konto erstellen</button></div>
+      ${reg ? feld("tkName","Dein Name (sehen die Kollegen)","text","","z. B. Alper") : ""}
+      ${feld("tkMail","E-Mail","email","","")}
+      ${feld("tkPw","Passwort","password","", reg ? "mindestens 6 Zeichen" : "")}
+      <div class="btnrow"><button id="tkLos" class="primary">${reg ? "Konto erstellen" : "Anmelden"}</button></div>
+      <div class="btnrow"><button id="tkTrennen" class="ghost small">Andere Datenbank verwenden</button></div>`;
+    $("#tkR1").onclick = ()=>{ teamReiter = "anmelden"; teamZeichnen(); };
+    $("#tkR2").onclick = ()=>{ teamReiter = "registrieren"; teamZeichnen(); };
+    $("#tkTrennen").onclick = ()=>{ localStorage.removeItem("teamKonfig"); location.reload(); };
+    $("#tkLos").onclick = async ()=>{
+      const mail = $("#tkMail").value.trim(), pw = $("#tkPw").value;
+      if(!mail || !pw){ teamMeldung("warn","Bitte E-Mail und Passwort eintragen."); return; }
+      $("#tkLos").disabled = true;
+      try{
+        if(reg){
+          const name = ($("#tkName").value||"").trim();
+          if(!name){ teamMeldung("warn","Bitte deinen Namen eintragen."); return; }
+          const {data, error} = await Team.sb.auth.signUp({email:mail, password:pw, options:{data:{name}}});
+          if(error) throw error;
+          if(!data.session){ teamMeldung("ok","Konto erstellt. Bestätige die E-Mail, die du bekommen hast, und melde dich danach hier an."); teamReiter = "anmelden"; teamZeichnen(); return; }
+          Team.user = data.session.user;
+        } else {
+          const {data, error} = await Team.sb.auth.signInWithPassword({email:mail, password:pw});
+          if(error) throw error;
+          Team.user = data.user;
+        }
+        teamMeldung(null);
+        await Team.teamsLaden(); teamZeichnen(); await syncAlles();
+      }catch(e){
+        teamMeldung("bad", /Invalid login/i.test(e.message) ? "E-Mail oder Passwort falsch." : e.message);
+      }finally{ const b = $("#tkLos"); if(b) b.disabled = false; }
+    };
+    return;
+  }
+  if(!Team.aktiv){
+    const code = localStorage.getItem("teamCode") || "";
+    box.innerHTML = `<p class="muted" style="margin:0">Angemeldet als <b>${Team.name().replace(/</g,"&lt;")}</b>. Tritt einem Team bei oder erstelle ein neues.</p>
+      ${feld("tkCode","Beitrittscode","text",code,"z. B. K7P2QX")}
+      <div class="btnrow"><button id="tkBeitreten" class="primary">Team beitreten</button></div>
+      ${feld("tkTeamName","Oder neues Team erstellen","text","","z. B. Rangierteam Rotkreuz")}
+      <div class="btnrow"><button id="tkErstellen" class="ghost">Team erstellen</button></div>
+      <div class="btnrow"><button id="tkAbmelden" class="ghost small">Abmelden</button></div>`;
+    $("#tkBeitreten").onclick = ()=> teamBeitreten($("#tkCode").value);
+    $("#tkErstellen").onclick = async ()=>{
+      const n = $("#tkTeamName").value.trim(); if(!n){ $("#tkTeamName").focus(); return; }
+      const {data, error} = await Team.sb.rpc("wl_team_erstellen", {p_name:n, p_anzeigename:Team.name()});
+      if(error){ teamMeldung("bad", "Team konnte nicht erstellt werden: " + error.message); return; }
+      localStorage.setItem("teamAktiv", data.id);
+      teamMeldung("ok", `Team „${n}“ erstellt. Teile jetzt den Einladungslink mit deinen Kollegen.`);
+      await Team.teamsLaden(); teamZeichnen(); await syncAlles();
+    };
+    $("#tkAbmelden").onclick = teamAbmelden;
+    if(code) setTimeout(()=>{ const b = $("#tkBeitreten"); if(b) b.focus(); }, 50);
+    return;
+  }
+  const t = Team.aktiv;
+  const namen = Team.mitglieder.map(m=>(m.anzeigename || "ohne Namen") + (m.rolle === "admin" ? " (Admin)" : "")).join(", ");
+  box.innerHTML = `<div class="kopfzeile2" style="margin-bottom:4px"><div><b>${t.name.replace(/</g,"&lt;")}</b><div class="muted">Angemeldet als ${Team.name().replace(/</g,"&lt;")}</div></div>
+      ${Team.teams.length > 1 ? `<select id="tkWechsel" style="width:auto">${Team.teams.map(x=>`<option value="${x.id}" ${x.id===t.id?"selected":""}>${x.name.replace(/</g,"&lt;")}</option>`).join("")}</select>` : ""}</div>
+    <div class="muted" id="teamSyncZeile" style="margin:6px 0">${syncHtml()}</div>
+    <label>Beitrittscode für Kollegen</label><div class="teamcode">${t.beitrittscode}</div>
+    <div class="btnrow"><button id="tkEinladen" class="primary">Einladungslink teilen</button><button id="tkSync" class="ghost">Jetzt synchronisieren</button></div>
+    <p class="muted" style="margin:10px 0 0">Mitglieder: ${namen.replace(/</g,"&lt;")}</p>
+    <div class="btnrow"><button id="tkAbmelden" class="ghost small">Abmelden</button><button id="tkVerlassen" class="ghost small">Team verlassen</button></div>`;
+  if($("#tkWechsel")) $("#tkWechsel").onchange = async e=>{ localStorage.setItem("teamAktiv", e.target.value); await Team.teamsLaden(); teamZeichnen(); await syncAlles(); };
+  $("#tkSync").onclick = ()=> syncAlles(true);
+  $("#tkAbmelden").onclick = teamAbmelden;
+  $("#tkVerlassen").onclick = async ()=>{
+    if(!await frage(`Team „${t.name}“ verlassen? Die Team-Listen bleiben auf diesem Gerät als lokale Listen erhalten.`)) return;
+    const {error} = await Team.sb.from("wl_mitglieder").delete().eq("team_id", t.id).eq("user_id", Team.user.id);
+    if(error){ teamMeldung("bad", error.message); return; }
+    await teamListenLoesen(t.id);
+    localStorage.removeItem("teamAktiv");
+    await Team.teamsLaden(); teamZeichnen(); ladeHome();
+  };
+  $("#tkEinladen").onclick = async ()=>{
+    const link = einladungsLink();
+    const text = `Einladung ins Team „${t.name}“ der Wagenliste. Link öffnen, Konto erstellen, fertig. Beitrittscode: ${t.beitrittscode}`;
+    try{
+      if(navigator.share){ await navigator.share({title:"Wagenliste – Team-Einladung", text, url:link}); return; }
+    }catch(e){ if(e.name === "AbortError") return; }
+    try{ await navigator.clipboard.writeText(link); teamMeldung("ok","Einladungslink kopiert. Schick ihn deinen Kollegen, z. B. per WhatsApp."); }
+    catch(e){ teamMeldung("ok","Einladungslink: " + link); }
+  };
+}
+async function teamBeitreten(code){
+  code = (code||"").trim().toUpperCase();
+  if(code.length < 4){ teamMeldung("warn","Bitte den Beitrittscode eintragen."); return; }
+  const {data, error} = await Team.sb.rpc("wl_team_beitreten", {p_code:code, p_anzeigename:Team.name()});
+  if(error){ teamMeldung("bad", /ungültig/i.test(error.message) ? "Dieser Beitrittscode ist ungültig." : error.message); return; }
+  localStorage.removeItem("teamCode");
+  localStorage.setItem("teamAktiv", data.id);
+  teamMeldung("ok", `Du bist jetzt im Team „${data.name}“. Die Team-Listen werden geladen.`);
+  await Team.teamsLaden(); teamZeichnen(); await syncAlles();
+}
+async function teamAbmelden(){
+  if(!await frage("Abmelden? Team-Listen bleiben auf diesem Gerät, werden aber erst nach dem nächsten Anmelden wieder synchronisiert.")) return;
+  Team.abmeldenKanal();
+  await Team.sb.auth.signOut();
+  Team.user = null; Team.aktiv = null; Team.teams = [];
+  teamZeichnen(); ladeHome();
+}
+async function teamListenLoesen(teamId){
+  for(const l of await DB.alle()){
+    if(l.team === teamId){ LOKALE_FELDER.forEach(k=>delete l[k]); await DB.sichere(l); }
+  }
+}
+
+/* ---------- Liste: teilen / Status ---------- */
+function teamListeZeichnen(){
+  const zeile = $("#teamListeZeile"); if(!zeile || !aktuell) return;
+  const sichtbar = !!aktuell.team || Team.bereit();
+  zeile.classList.toggle("hidden", !sichtbar);
+  if(!sichtbar) return;
+  const info = $("#teamListeInfo"), btn = $("#teamListeBtn");
+  if(aktuell.team){
+    const fremd = !Team.aktiv || Team.aktiv.id !== aktuell.team;
+    const z = fremd ? "Liste eines anderen Teams oder nicht angemeldet, Änderungen bleiben vorerst auf dem Gerät."
+            : aktuell.dirty ? (Team.sync.zustand === "fehler" ? "Im Team geteilt · nicht gesendet: " + Team.sync.text : "Im Team geteilt · wird gesendet …")
+            : "Im Team geteilt · gespeichert" + (aktuell.vonName ? " · zuletzt geändert von " + aktuell.vonName : "");
+    info.textContent = z;
+    btn.textContent = "Aus dem Team entfernen";
+    btn.disabled = fremd;
+  } else {
+    info.textContent = "Diese Liste ist nur auf diesem Gerät.";
+    btn.textContent = "Mit Team „" + (Team.aktiv ? Team.aktiv.name : "") + "“ teilen";
+    btn.disabled = false;
+  }
+}
+$("#teamListeBtn").onclick = async ()=>{
+  if(!aktuell) return;
+  if(aktuell.team){
+    if(!await frage("Liste aus dem Team entfernen? Sie verschwindet bei allen Kollegen und bleibt nur auf diesem Gerät.")) return;
+    const ok = await teamListeLoeschen(aktuell);
+    if(!ok) return;
+    LOKALE_FELDER.forEach(k=>delete aktuell[k]);
+    await DB.sichere(aktuell);
+    zeichneListe();
+  } else {
+    if(!Team.bereit()) return;
+    aktuell.team = Team.aktiv.id; aktuell.sv = 0;
+    aktuell = await speichereListe(aktuell);
+    zeichneListe();
+  }
+};
+async function teamListeLoeschen(l){
+  const {error} = await Team.sb.from("wl_listen").delete().eq("id", l.id);
+  if(error){ await frageInfo("Löschen im Team nicht möglich: " + error.message); return false; }
+  const pfade = l.wagen.filter(w=>w.fotoId).map(w=>`${l.team}/${w.fotoId}.jpg`);
+  if(pfade.length) Team.sb.storage.from("wagenfotos").remove(pfade).catch(()=>{});
+  return true;
+}
+function teamFotoWeg(l, fotoId){
+  if(!l || !l.team || !Team.bereit() || l.team !== Team.aktiv.id) return;
+  Team.sb.storage.from("wagenfotos").remove([`${l.team}/${fotoId}.jpg`]).catch(()=>{});
+  const h = fotosHochHol(); delete h[fotoId]; fotosHochSetzen(h);
+}
+
+/* ---------- Senden ---------- */
+function fotosHochHol(){ try{ return JSON.parse(localStorage.getItem("fotosImTeam")||"{}"); }catch(e){ return {}; } }
+function fotosHochSetzen(h){ try{ localStorage.setItem("fotosImTeam", JSON.stringify(h)); }catch(e){} }
+function listeDaten(l){ const d = JSON.parse(JSON.stringify(l)); LOKALE_FELDER.forEach(k=>delete d[k]); return d; }
+let pushTimer = null; const pushIds = new Set();
+function pushPlanen(id){ pushIds.add(id); clearTimeout(pushTimer); pushTimer = setTimeout(pushAlle, 600); }
+let pushLaeuft = null;
+async function pushAlle(){
+  if(!Team.bereit()) { if(pushIds.size) syncSetzen("fehler","nicht angemeldet oder offline"); return; }
+  if(pushLaeuft) { await pushLaeuft; }
+  pushLaeuft = (async ()=>{
+    const ids = [...pushIds]; pushIds.clear();
+    for(const l of await DB.alle()) if(l.team === Team.aktiv.id && l.dirty && !ids.includes(l.id)) ids.push(l.id);
+    if(!ids.length) return;
+    syncSetzen("sende");
+    let fehler = null;
+    for(const id of ids){ try{ await pushListe(id); }catch(e){ fehler = e; } }
+    if(fehler) syncSetzen("fehler", navigator.onLine === false ? "offline" : fehler.message);
+    else syncSetzen("ok");
+    ansichtAuffrischen();
+  })();
+  await pushLaeuft; pushLaeuft = null;
+}
+async function fotosHochladen(l){
+  const h = fotosHochHol();
+  for(const w of l.wagen){
+    if(!w.fotoId || h[w.fotoId]) continue;
+    const d = await DB.foto(w.fotoId); if(!d) continue;
+    const blob = await (await fetch(d)).blob();
+    const {error} = await Team.sb.storage.from("wagenfotos").upload(`${l.team}/${w.fotoId}.jpg`, blob, {contentType:"image/jpeg", upsert:true});
+    if(error && !/exist|duplicate/i.test(error.message)) throw new Error("Foto-Upload: " + error.message);
+    h[w.fotoId] = 1; fotosHochSetzen(h);
+  }
+}
+async function pushListe(id){
+  const l = await DB.hol(id);
+  if(!l || !l.team || !l.dirty || !Team.bereit() || l.team !== Team.aktiv.id) return;
+  await fotosHochladen(l);
+  const {data, error} = await Team.sb.rpc("wl_liste_speichern",
+    {p_id:l.id, p_team:l.team, p_daten:listeDaten(l), p_version:l.sv||0, p_name:Team.name()});
+  if(error) throw new Error(error.message);
+  const jetzt = await DB.hol(id);
+  if(data.ok){
+    // Zwischenzeitliche lokale Änderungen nicht verlieren: nur gesendeten Stand als sauber markieren
+    jetzt.sv = data.version; jetzt.svDurchPush = true; jetzt.vonName = Team.name();
+    if((jetzt.geaendert||0) === (l.geaendert||0)) jetzt.dirty = false; else pushPlanen(id);
+    await DB.sichere(jetzt);
+    if(aktuell && aktuell.id === id){ aktuell.sv = jetzt.sv; aktuell.svDurchPush = true; aktuell.vonName = jetzt.vonName; aktuell.dirty = jetzt.dirty; }
+  } else if(data.geloescht){
+    LOKALE_FELDER.forEach(k=>delete jetzt[k]);
+    jetzt.konflikt = "Im Team gelöscht, als lokale Liste behalten";
+    await DB.sichere(jetzt);
+    teamMeldung("warn", `„${kopfzeile(jetzt)}“ wurde im Team gelöscht. Deine Fassung bleibt als lokale Liste erhalten.`);
+  } else {
+    await konfliktLoesen(jetzt, data);
+  }
+}
+async function konfliktLoesen(lokal, server){
+  const kopie = listeDaten(lokal);
+  kopie.id = uid(); kopie.geaendert = Date.now();
+  kopie.konflikt = `Konfliktkopie: ${server.von || "ein Kollege"} hat diese Liste gleichzeitig geändert. Bitte vergleichen und dann löschen.`;
+  await DB.sichere(kopie);
+  await DB.sichere({...server.daten, id:lokal.id, team:lokal.team, sv:server.version, dirty:false, vonName:server.von||""});
+  fotosNachladen(server.daten, lokal.team);
+  teamMeldung("warn", `„${kopfzeile(lokal)}“ wurde gleichzeitig von ${server.von || "einem Kollegen"} geändert. Die Team-Fassung gilt, deine Fassung liegt als Konfliktkopie bei den offenen Listen.`);
+}
+
+/* ---------- Holen ---------- */
+let holenTimer = null;
+function holenPlanen(){ clearTimeout(holenTimer); holenTimer = setTimeout(()=>syncAlles(), 800); }
+let syncLaeuft = false;
+async function syncAlles(manuell){
+  if(!Team.bereit()){ if(manuell) teamMeldung("warn","Nicht angemeldet oder kein Team gewählt."); return; }
+  if(syncLaeuft) return; syncLaeuft = true;
+  try{
+    syncSetzen("sende");
+    await pushAlle();
+    await holen();
+    syncSetzen("ok");
+    if(manuell) teamMeldung("ok","Alles synchronisiert.");
+  }catch(e){
+    syncSetzen("fehler", navigator.onLine === false ? "offline" : e.message);
+  }finally{ syncLaeuft = false; ansichtAuffrischen(); }
+}
+async function holen(){
+  const T = Team.aktiv.id;
+  const {data:kopf, error} = await Team.sb.from("wl_listen").select("id, version, geaendert_von_name").eq("team_id", T);
+  if(error) throw new Error(error.message);
+  const lokal = (await DB.alle()).filter(l=>l.team === T);
+  const lokMap = new Map(lokal.map(l=>[l.id, l]));
+  const neuIds = kopf.filter(k=>{ const l = lokMap.get(k.id); return !l || (l.sv||0) < k.version; }).map(k=>k.id);
+  if(neuIds.length){
+    const {data:voll, error:e2} = await Team.sb.from("wl_listen").select("id, version, daten, geaendert_von_name").in("id", neuIds);
+    if(e2) throw new Error(e2.message);
+    for(const r of voll){
+      const l = lokMap.get(r.id);
+      if(l && l.dirty) await konfliktLoesen(l, {version:r.version, daten:r.daten, von:r.geaendert_von_name});
+      else await DB.sichere({...r.daten, id:r.id, team:T, sv:r.version, dirty:false, vonName:r.geaendert_von_name||""});
+      fotosNachladen(r.daten, T);
+    }
+  }
+  const serverIds = new Set(kopf.map(k=>k.id));
+  for(const l of lokal){
+    if(serverIds.has(l.id) || !(l.sv > 0)) continue;
+    if(l.dirty){
+      LOKALE_FELDER.forEach(k=>delete l[k]); l.konflikt = "Im Team gelöscht, als lokale Liste behalten";
+      await DB.sichere(l);
+    } else {
+      for(const w of l.wagen){ if(w.fotoId) await DB.fotoWeg(w.fotoId); }
+      await DB.weg(l.id);
+      if(aktuell && aktuell.id === l.id && document.body.dataset.ansicht !== "home"){
+        aktuell = null; await ladeHome(); teamMeldung("warn", `„${kopfzeile(l)}“ wurde von einem Kollegen gelöscht.`);
+      }
+    }
+  }
+}
+const fotoLaden = new Set();
+async function fotosNachladen(daten, T){
+  const fehlend = [];
+  for(const w of (daten.wagen||[])){ if(w.fotoId && !fotoLaden.has(w.fotoId) && !(await DB.foto(w.fotoId))) fehlend.push(w.fotoId); }
+  if(!fehlend.length) return;
+  const h = fotosHochHol();
+  for(const id of fehlend){
+    fotoLaden.add(id);
+    try{
+      const {data, error} = await Team.sb.storage.from("wagenfotos").download(`${T}/${id}.jpg`);
+      if(error || !data) continue;
+      const url = await new Promise(res=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.readAsDataURL(data); });
+      await DB.fotoSet(id, url); h[id] = 1;
+    }catch(e){} finally{ fotoLaden.delete(id); }
+  }
+  fotosHochSetzen(h);
+  ansichtAuffrischen();
+}
+/* Ansicht nach Synchronisierung neu zeichnen, ohne laufende Eingaben zu stören */
+let auffrischTimer = null;
+function ansichtAuffrischen(){
+  clearTimeout(auffrischTimer);
+  auffrischTimer = setTimeout(async ()=>{
+    const v = document.body.dataset.ansicht;
+    if(v === "home"){ listen = await DB.alle(); homeZeichnen(); const z = $("#teamSyncZeile"); if(z) z.innerHTML = syncHtml(); }
+    else if(v === "liste" && aktuell && !auswahl && !document.querySelector("dialog[open]")){
+      const neu = await DB.hol(aktuell.id);
+      if(neu){ neu.wagen = neu.wagen.map(wNorm); aktuell = neu; zeichneListe(); }
+    }
+  }, 250);
+}
+window.addEventListener("online", ()=> syncAlles());
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") holenPlanen(); });
+setInterval(()=>{ if(document.visibilityState === "visible" && Team.bereit()) syncAlles(); }, 90000);
 
 /* ---------------- Wagen suchen über alle Listen ---------------- */
 async function wagenSuchen(){
@@ -2391,6 +3069,7 @@ $("#suche").addEventListener("input", homeZeichnen);
 $("#neuerWagen").onclick = neuerWagen;
 $("#back").onclick = ()=>{
   diktatStopp();
+  if(auswahl && !$("#viewListe").classList.contains("hidden")){ auswahl = null; zeichneListe(); return; }
   if(!$("#viewWagen").classList.contains("hidden") || !$("#viewVergleich").classList.contains("hidden")) zeichneListe();
   else ladeHome();
 };
@@ -2407,6 +3086,9 @@ try{ const t = localStorage.getItem("theme"); if(t) document.documentElement.set
   try{
     eigeneGat = (await DB.eigene()).map(x=>({...x, eigen:true}));
     await ladeHome();
+    einladungPruefen();
+    teamZeichnen();
+    Team.start().catch(err=> teamMeldung("bad", "Team-Verbindung fehlgeschlagen: " + err.message));
   }catch(e){
     document.querySelector("main").innerHTML =
       '<div class="card"><h2>Speicher nicht verfügbar</h2><p class="muted">Die App braucht den lokalen Speicher des Browsers. Im privaten Modus funktioniert das nicht immer.</p></div>';
