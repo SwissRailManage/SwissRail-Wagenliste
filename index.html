@@ -1954,6 +1954,11 @@ $("#ocrBtn").onclick = async ()=>{
 /* ---------------- Mehrere Fotos importieren ---------------- */
 const natuerlich = (a,b)=> a.name.localeCompare(b.name, "de", {numeric:true, sensitivity:"base"});
 async function massenImport(files){
+  beschaeftigt++;
+  try{ await massenImportIntern(files); }
+  finally{ beschaeftigt--; ansichtAuffrischen(); }
+}
+async function massenImportIntern(files){
   if(!aktuell || !files.length) return;
   files = [...files].filter(f=>/^image\//.test(f.type)).sort(natuerlich);
   if(!files.length) return;
@@ -2121,6 +2126,10 @@ async function rgVorschau(){
 document.querySelectorAll('input[name="rgWo"]').forEach(r=> r.addEventListener("change", rgVorschau));
 $("#rgAbbruch").onclick = ()=> $("#dlgRangier").close();
 $("#rgStart").onclick = async ()=>{
+  beschaeftigt++;
+  try{ await rangierenAusfuehren(); } finally{ beschaeftigt--; }
+};
+async function rangierenAusfuehren(){
   const v = $("#rgZiel").value;
   if(v === "__neu" && !$("#rgGleis").value.trim()){ $("#rgGleis").focus(); return; }
   const wo = document.querySelector('input[name="rgWo"]:checked').value;
@@ -2153,7 +2162,7 @@ $("#rgStart").onclick = async ()=>{
   const b = el("button","ghost small","Zu " + kopfzeile(ziel) + " wechseln"); b.style.marginTop = "8px"; b.style.display = "block";
   b.onclick = ()=> oeffne(ziel.id);
   $("#teilenInfo").appendChild(b);
-};
+}
 let zuletztVerschoben = null;
 function verlaufZeichnen(){
   const v = (aktuell.verlauf || []).slice(-10).reverse();
@@ -2245,6 +2254,40 @@ function syncHtml(){
   return `<span class="syncpunkt" style="background:${f}"></span>${t.replace(/</g,"&lt;")}`;
 }
 
+/* ---------- Verbindung prüfen: verständliche Fehlermeldung statt "Failed to fetch" ---------- */
+const APP_ADRESSE = "https://swissrailmanage.github.io/SwissRail-Wagenliste/";
+async function verbindungPruefen(k){
+  k = k || Team.konfig();
+  if(!k || !k.url) return "Es ist keine Datenbank eingetragen.";
+  const url = k.url.trim().replace(/\/+$/,"");
+  if(/(^|\.)claude\.ai$|claudeusercontent\.com$|claude\.site$/.test(location.hostname))
+    return "Hier ist die Verbindung zur Datenbank gesperrt. Öffne die App über " + APP_ADRESSE;
+  if(/supabase\.com\/(dashboard|project)/i.test(url))
+    return "Eingetragen ist die Adresse des Supabase-Dashboards. Nötig ist die „Project URL“ aus Settings → API, sie sieht so aus: https://abcdefgh.supabase.co";
+  if(!/^https?:\/\/[^\s/]+/i.test(url))
+    return "Die Datenbank-Adresse ist ungültig: „" + url + "“. Sie muss mit https:// beginnen.";
+  if(location.protocol === "https:" && /^http:\/\//i.test(url))
+    return "Die Datenbank-Adresse beginnt mit http://. Die App läuft verschlüsselt über https://, darum blockiert der Browser die Verbindung. " +
+           "Der Supabase-Server braucht eine https-Adresse, zum Beispiel eine eigene Domain mit SSL-Zertifikat.";
+  if(navigator.onLine === false) return "Das Gerät ist offline. Bitte Internetverbindung prüfen.";
+  try{
+    const r = await fetch(url + "/auth/v1/health", {headers:{apikey:k.key, Authorization:"Bearer " + k.key}});
+    if(r.status === 401 || r.status === 403)
+      return "Die Datenbank antwortet, aber der Schlüssel passt nicht. Bitte den „anon public“-Key aus Settings → API nochmals vollständig kopieren.";
+    if(r.status === 404)
+      return "Unter dieser Adresse läuft kein Supabase. Bitte die „Project URL“ aus Settings → API prüfen.";
+    if(r.status >= 500)
+      return "Die Datenbank meldet einen Serverfehler (" + r.status + "). Bei einem eigenen Server läuft vermutlich ein Dienst nicht.";
+    if(!r.ok) return "Die Datenbank antwortet mit Fehler " + r.status + ".";
+    return null;
+  }catch(e){
+    return "Die Datenbank ist unter " + url + " nicht erreichbar. Mögliche Gründe: Tippfehler in der Adresse; " +
+           "das Supabase-Projekt ist pausiert (Gratis-Projekte schlafen nach einer Woche ohne Nutzung ein, im Supabase-Dashboard auf „Restore project“ klicken); " +
+           "beim eigenen Server ist er von aussen nicht erreichbar oder der Browser-Zugriff (CORS) ist nicht freigegeben.";
+  }
+}
+const istNetzfehler = e => /failed to fetch|load failed|networkerror|network request failed|fetch/i.test((e && e.message) || "");
+
 /* ---------- Einladungslink ---------- */
 function einladungPruefen(){
   const h = location.hash || "";
@@ -2283,8 +2326,13 @@ function teamZeichnen(){
     $("#tkVerbinden").onclick = async ()=>{
       const url = $("#tkUrl").value.trim().replace(/\/+$/,""), key = $("#tkKey").value.trim();
       if(!/^https?:\/\//.test(url) || key.length < 20){ teamMeldung("warn","Bitte Adresse und Anon-Key vollständig eintragen."); return; }
+      $("#tkVerbinden").disabled = true;
+      teamMeldung("warn", "Verbindung wird geprüft …");
+      const fehler = await verbindungPruefen({url, key});
+      $("#tkVerbinden").disabled = false;
+      if(fehler){ teamMeldung("bad", fehler); return; }
       localStorage.setItem("teamKonfig", JSON.stringify({url, key}));
-      teamMeldung(null);
+      teamMeldung("ok", "Verbindung zur Datenbank klappt. Melde dich jetzt an oder erstelle ein Konto.");
       try{ await Team.start(); }catch(e){ teamMeldung("bad", e.message); }
       teamZeichnen();
     };
@@ -2301,10 +2349,16 @@ function teamZeichnen(){
       ${feld("tkMail","E-Mail","email","","")}
       ${feld("tkPw","Passwort","password","", reg ? "mindestens 6 Zeichen" : "")}
       <div class="btnrow"><button id="tkLos" class="primary">${reg ? "Konto erstellen" : "Anmelden"}</button></div>
-      <div class="btnrow"><button id="tkTrennen" class="ghost small">Andere Datenbank verwenden</button></div>`;
+      <div class="btnrow"><button id="tkTrennen" class="ghost small">Andere Datenbank verwenden</button><button id="tkTest" class="ghost small">Verbindung testen</button></div>
+      <p class="muted" style="margin:8px 0 0;word-break:break-all">Datenbank: ${k.url.replace(/</g,"&lt;")}</p>`;
     $("#tkR1").onclick = ()=>{ teamReiter = "anmelden"; teamZeichnen(); };
     $("#tkR2").onclick = ()=>{ teamReiter = "registrieren"; teamZeichnen(); };
     $("#tkTrennen").onclick = ()=>{ localStorage.removeItem("teamKonfig"); location.reload(); };
+    $("#tkTest").onclick = async ()=>{
+      teamMeldung("warn", "Verbindung wird geprüft …");
+      const f = await verbindungPruefen();
+      teamMeldung(f ? "bad" : "ok", f || "Die Datenbank ist erreichbar und der Schlüssel stimmt.");
+    };
     $("#tkLos").onclick = async ()=>{
       const mail = $("#tkMail").value.trim(), pw = $("#tkPw").value;
       if(!mail || !pw){ teamMeldung("warn","Bitte E-Mail und Passwort eintragen."); return; }
@@ -2325,7 +2379,15 @@ function teamZeichnen(){
         teamMeldung(null);
         await Team.teamsLaden(); teamZeichnen(); await syncAlles();
       }catch(e){
-        teamMeldung("bad", /Invalid login/i.test(e.message) ? "E-Mail oder Passwort falsch." : e.message);
+        if(istNetzfehler(e)){
+          teamMeldung("warn", "Verbindung wird geprüft …");
+          teamMeldung("bad", (await verbindungPruefen()) || ("Verbindungsproblem: " + e.message + ". Bitte nochmals versuchen."));
+        } else if(/Invalid login/i.test(e.message)) teamMeldung("bad", "E-Mail oder Passwort falsch.");
+        else if(/already registered/i.test(e.message)) teamMeldung("bad", "Mit dieser E-Mail gibt es schon ein Konto. Bitte auf „Anmelden“ wechseln.");
+        else if(/Password should be/i.test(e.message)) teamMeldung("bad", "Das Passwort ist zu kurz, es braucht mindestens 6 Zeichen.");
+        else if(/not confirmed/i.test(e.message)) teamMeldung("bad", "Die E-Mail ist noch nicht bestätigt. Bitte den Link in der Bestätigungs-Mail antippen und danach anmelden.");
+        else if(/signups not allowed|signup.*disabled/i.test(e.message)) teamMeldung("bad", "Neue Konten sind in dieser Datenbank ausgeschaltet. Der Admin muss in Supabase unter Authentication → Sign In / Providers „Allow new users to sign up“ einschalten.");
+        else teamMeldung("bad", e.message);
       }finally{ const b = $("#tkLos"); if(b) b.disabled = false; }
     };
     return;
@@ -2460,22 +2522,22 @@ function fotosHochSetzen(h){ try{ localStorage.setItem("fotosImTeam", JSON.strin
 function listeDaten(l){ const d = JSON.parse(JSON.stringify(l)); LOKALE_FELDER.forEach(k=>delete d[k]); return d; }
 let pushTimer = null; const pushIds = new Set();
 function pushPlanen(id){ pushIds.add(id); clearTimeout(pushTimer); pushTimer = setTimeout(pushAlle, 600); }
-let pushLaeuft = null;
-async function pushAlle(){
+/* Alle Team-Vorgänge (Senden, Holen) laufen strikt nacheinander in einer Kette.
+   So kann ein Holen nie ein gerade laufendes Senden überholen. */
+let syncKette = Promise.resolve();
+function inKette(fn){ const p = syncKette.then(fn, fn); syncKette = p.catch(()=>{}); return p; }
+function pushAlle(){ return inKette(pushAlleIntern); }
+async function pushAlleIntern(){
   if(!Team.bereit()) { if(pushIds.size) syncSetzen("fehler","nicht angemeldet oder offline"); return; }
-  if(pushLaeuft) { await pushLaeuft; }
-  pushLaeuft = (async ()=>{
-    const ids = [...pushIds]; pushIds.clear();
-    for(const l of await DB.alle()) if(l.team === Team.aktiv.id && l.dirty && !ids.includes(l.id)) ids.push(l.id);
-    if(!ids.length) return;
-    syncSetzen("sende");
-    let fehler = null;
-    for(const id of ids){ try{ await pushListe(id); }catch(e){ fehler = e; } }
-    if(fehler) syncSetzen("fehler", navigator.onLine === false ? "offline" : fehler.message);
-    else syncSetzen("ok");
-    ansichtAuffrischen();
-  })();
-  await pushLaeuft; pushLaeuft = null;
+  const ids = [...pushIds]; pushIds.clear();
+  for(const l of await DB.alle()) if(l.team === Team.aktiv.id && l.dirty && !ids.includes(l.id)) ids.push(l.id);
+  if(!ids.length) return;
+  syncSetzen("sende");
+  let fehler = null;
+  for(const id of ids){ try{ await pushListe(id); }catch(e){ fehler = e; } }
+  if(fehler) syncSetzen("fehler", navigator.onLine === false ? "offline" : fehler.message);
+  else syncSetzen("ok");
+  ansichtAuffrischen();
 }
 async function fotosHochladen(l){
   const h = fotosHochHol();
@@ -2530,8 +2592,7 @@ async function syncAlles(manuell){
   if(syncLaeuft) return; syncLaeuft = true;
   try{
     syncSetzen("sende");
-    await pushAlle();
-    await holen();
+    await inKette(async ()=>{ await pushAlleIntern(); await holen(); });
     syncSetzen("ok");
     if(manuell) teamMeldung("ok","Alles synchronisiert.");
   }catch(e){
@@ -2589,15 +2650,21 @@ async function fotosNachladen(daten, T){
   ansichtAuffrischen();
 }
 /* Ansicht nach Synchronisierung neu zeichnen, ohne laufende Eingaben zu stören */
-let auffrischTimer = null;
+let auffrischTimer = null, beschaeftigt = 0;
 function ansichtAuffrischen(){
   clearTimeout(auffrischTimer);
   auffrischTimer = setTimeout(async ()=>{
     const v = document.body.dataset.ansicht;
     if(v === "home"){ listen = await DB.alle(); homeZeichnen(); const z = $("#teamSyncZeile"); if(z) z.innerHTML = syncHtml(); }
-    else if(v === "liste" && aktuell && !auswahl && !document.querySelector("dialog[open]")){
+    else if(v === "liste" && aktuell){
+      // Neu laden nur, wenn ein Kollege die Liste geändert hat und gerade nichts läuft
       const neu = await DB.hol(aktuell.id);
-      if(neu){ neu.wagen = neu.wagen.map(wNorm); aktuell = neu; zeichneListe(); }
+      const fremd = neu && (neu.sv||0) > (aktuell.sv||0) && !neu.svDurchPush;
+      if(fremd && !beschaeftigt && !auswahl && !document.querySelector("dialog[open]")){
+        neu.wagen = neu.wagen.map(wNorm); aktuell = neu; zeichneListe();
+      } else {
+        teamListeZeichnen();
+      }
     }
   }, 250);
 }
@@ -3088,7 +3155,7 @@ try{ const t = localStorage.getItem("theme"); if(t) document.documentElement.set
     await ladeHome();
     einladungPruefen();
     teamZeichnen();
-    Team.start().catch(err=> teamMeldung("bad", "Team-Verbindung fehlgeschlagen: " + err.message));
+    Team.start().catch(async err=> teamMeldung("bad", "Team-Verbindung fehlgeschlagen: " + ((await verbindungPruefen()) || err.message)));
   }catch(e){
     document.querySelector("main").innerHTML =
       '<div class="card"><h2>Speicher nicht verfügbar</h2><p class="muted">Die App braucht den lokalen Speicher des Browsers. Im privaten Modus funktioniert das nicht immer.</p></div>';
