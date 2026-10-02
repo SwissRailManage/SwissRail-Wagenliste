@@ -64,6 +64,10 @@ body.nurlesen :is(#bahnhof,#gleis,#datum,#seiteA,#seiteB,#klasse){pointer-events
 .mitglied:last-child{border-bottom:none}
 .mitglied select{width:auto;padding:6px 8px;font-size:14px}
 .auftragtxt{font-weight:700;font-size:14px}
+.astatus{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;color:#fff;margin-top:4px}
+#arbeitKarte{border-left:4px solid #B25A12}
+#auftragKarte{border-left:4px solid var(--red)}
+#fertigKarte{border-left:4px solid var(--ok)}
 .vier{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:end}
 .vier label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .unterkopf{font-size:13px;font-weight:700;color:var(--mut);margin:14px 0 2px}
@@ -222,10 +226,20 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <ul class="list" id="wagenTreffer" style="margin-top:6px"></ul>
       <div class="muted hidden" id="wagenTrefferInfo" style="margin-top:6px"></div>
     </div>
-    <div class="card voll hidden" id="auftragKarte">
-      <h2>Rangieraufträge <span class="pill" id="anzAuftraege">0</span></h2>
+    <div class="card voll hidden auftragsKarte" id="auftragKarte">
+      <h2>Offene Rangieraufträge <span class="pill" id="anzAuftraege">0</span></h2>
       <ul class="list" id="auftragListe"></ul>
       <div class="empty hidden" id="auftragLeer">Keine offenen Aufträge.</div>
+    </div>
+    <div class="card voll hidden auftragsKarte" id="arbeitKarte">
+      <h2>In Arbeit <span class="pill" id="anzArbeit">0</span></h2>
+      <ul class="list" id="arbeitListe"></ul>
+      <div class="empty hidden" id="arbeitLeer">Kein Auftrag in Arbeit.</div>
+    </div>
+    <div class="card voll hidden auftragsKarte" id="fertigKarte">
+      <h2>Erledigte Rangieraufträge <span class="pill" id="anzFertig">0</span></h2>
+      <ul class="list" id="fertigListe"></ul>
+      <div class="empty hidden" id="fertigLeer">Noch keine erledigten Aufträge.</div>
     </div>
     <div class="card">
       <h2>Offene Listen <span class="pill" id="anzOffen">0</span></h2>
@@ -499,9 +513,22 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
 <dialog id="dlgAuftrag"><div class="dlg">
   <h2 id="afTitel">Rangierauftrag</h2>
   <div id="afInhalt"></div>
+  <div class="btnrow"><button id="afAnnehmen" class="primary">Annehmen</button></div>
   <div class="btnrow"><button id="afAusfuehren" class="primary">Ausführen</button></div>
+  <div class="btnrow"><button id="afZurueck" class="ghost">Zurückgeben</button></div>
   <div class="btnrow"><button id="afQuelle" class="ghost">Ausgangsgleis öffnen</button><button id="afStorno" class="ghost">Stornieren</button></div>
   <div class="btnrow"><button id="afZu" class="ghost">Schliessen</button></div>
+</div></dialog>
+
+<dialog id="dlgAnnehmen"><div class="dlg">
+  <h2>Auftrag annehmen</h2>
+  <p class="muted" style="margin-top:0">Alle im Team sehen danach, dass ihr den Auftrag ausführt.</p>
+  <label for="anTeam">Rangierteam</label>
+  <input id="anTeam" placeholder="z. B. Team 2, Lok 932" autocomplete="off">
+  <div class="two" style="margin-top:14px">
+    <button id="anAbbruch" class="ghost">Abbrechen</button>
+    <button id="anOk" class="primary">Annehmen</button>
+  </div>
 </div></dialog>
 
 <dialog id="dlgVergleich"><div class="dlg">
@@ -2954,52 +2981,100 @@ async function auftraegeHolen(){
   if(offenerAuftrag){ const a = Team.auftraege.find(x=>x.id === offenerAuftrag); if(a){ offenerAuftrag = null; auftragOeffnen(a); } }
 }
 function auftraegeZeichnen(){
-  const karte = $("#auftragKarte"); if(!karte) return;
-  karte.classList.toggle("hidden", !Team.aktiv);
-  if(!Team.aktiv) return;
-  const offen = Team.auftraege.filter(a=>a.status === "offen");
-  const fertig = Team.auftraege.filter(a=>a.status !== "offen").slice(0,3);
-  $("#anzAuftraege").textContent = offen.length;
-  const ul = $("#auftragListe"); ul.innerHTML = "";
-  [...offen, ...fertig].forEach(a=>{
-    const li = el("li");
-    const g = el("div","grow");
+  const karten = ["#auftragKarte","#arbeitKarte","#fertigKarte"];
+  karten.forEach(k=> $(k) && $(k).classList.toggle("hidden", !Team.aktiv));
+  if(!Team.aktiv || !$("#auftragKarte")) return;
+  const offen  = Team.auftraege.filter(a=>a.status === "offen");
+  const arbeit = Team.auftraege.filter(a=>a.status === "in_arbeit");
+  const fertig = Team.auftraege.filter(a=>a.status === "erledigt" || a.status === "storniert")
+                   .sort((x,y)=> new Date(y.erledigt||y.erstellt) - new Date(x.erledigt||x.erstellt)).slice(0,15);
+  const zeile = (a, unter) => {
+    const li = el("li"), g = el("div","grow");
     g.appendChild(el("div","auftragtxt", auftragText(a)));
-    g.appendChild(el("div","sub", `${a.erstellt_von_name || "?"} · ${zeitKurz(a.erstellt)} · ${a.wo === "vorne" ? "vorne" : "hinten"} anhängen` +
-                              (a.umdrehen ? " · umgedreht" : "") + (a.bemerkung ? " · " + a.bemerkung : "")));
-    if(a.status !== "offen"){
-      li.style.opacity = ".6";
-      g.appendChild(el("div","sub", a.status === "erledigt" ? `erledigt von ${a.erledigt_von_name || "?"}` : "storniert"));
-    }
+    unter.forEach(t=> t && g.appendChild(el("div","sub", t)));
+    if(a.status === "storniert"){ const b = el("span","astatus","storniert"); b.style.background = "var(--mut)"; g.appendChild(b); li.style.opacity = ".7"; }
     li.appendChild(g); li.appendChild(el("span","iconbtn","›"));
     li.onclick = ()=> auftragOeffnen(a);
-    ul.appendChild(li);
-  });
-  $("#auftragLeer").classList.toggle("hidden", offen.length + fertig.length > 0);
+    return li;
+  };
+  const art = a => `${a.wo === "vorne" ? "vorne" : "hinten"} anhängen` + (a.umdrehen ? ", umgedreht" : "");
+  const fuelle = (ul, leer, anz, liste, unter) => {
+    $(ul).innerHTML = ""; liste.forEach(a=> $(ul).appendChild(zeile(a, unter(a))));
+    $(anz).textContent = liste.length; $(leer).classList.toggle("hidden", liste.length > 0);
+  };
+  fuelle("#auftragListe","#auftragLeer","#anzAuftraege", offen, a=>[
+    `Erteilt von ${a.erstellt_von_name || "?"} · ${zeitKurz(a.erstellt)} · ${art(a)}`, a.bemerkung || null]);
+  fuelle("#arbeitListe","#arbeitLeer","#anzArbeit", arbeit, a=>[
+    `${a.rangierteam ? a.rangierteam + " · " : ""}${a.angenommen_von_name || "?"} · angenommen ${zeitKurz(a.angenommen)}`,
+    `Erteilt von ${a.erstellt_von_name || "?"} · ${art(a)}` + (a.bemerkung ? " · " + a.bemerkung : "")]);
+  fuelle("#fertigListe","#fertigLeer","#anzFertig", fertig, a=> a.status === "storniert"
+    ? [`Storniert von ${a.erledigt_von_name || "?"} · ${zeitKurz(a.erledigt || a.erstellt)}`]
+    : [`${a.rangierteam ? a.rangierteam + " · " : ""}erledigt von ${a.erledigt_von_name || "?"} · ${zeitKurz(a.erledigt)}`,
+       `Erteilt von ${a.erstellt_von_name || "?"} · ${zeitKurz(a.erstellt)}`]);
 }
 let offenerAuftrag = null, auftragImDialog = null;
 function auftragOeffnen(a){
   auftragImDialog = a;
-  $("#afTitel").textContent = a.status === "offen" ? "Rangierauftrag" : (a.status === "erledigt" ? "Rangierauftrag (erledigt)" : "Rangierauftrag (storniert)");
-  const nr = n => formatiere(n);
+  const titel = {offen:"Rangierauftrag", in_arbeit:"Rangierauftrag (in Arbeit)", erledigt:"Rangierauftrag (erledigt)", storniert:"Rangierauftrag (storniert)"};
+  $("#afTitel").textContent = titel[a.status] || "Rangierauftrag";
+  const ichHabe = !!(Team.user && a.angenommen_von === Team.user.id);
   $("#afInhalt").innerHTML = `
     <p style="margin:0 0 6px"><b>${esc(auftragText(a))}</b></p>
     <p class="muted" style="margin:0 0 8px">${a.wo === "vorne" ? "Vorne" : "Hinten"} anhängen${a.umdrehen ? ", Gruppe umgedreht" : ""}.
-      Erteilt von ${esc(a.erstellt_von_name || "?")}, ${zeitKurz(a.erstellt)}.${a.status === "erledigt" ? ` Erledigt von ${esc(a.erledigt_von_name || "?")}, ${zeitKurz(a.erledigt)}.` : ""}</p>
+      Erteilt von ${esc(a.erstellt_von_name || "?")}, ${zeitKurz(a.erstellt)}.</p>
+    ${a.status === "in_arbeit" ? `<div class="note warn" style="margin:0 0 8px">In Arbeit${a.rangierteam ? " bei <b>" + esc(a.rangierteam) + "</b>" : ""}: ${esc(a.angenommen_von_name || "?")}, seit ${zeitKurz(a.angenommen)}${ichHabe ? " (du)" : ""}.</div>` : ""}
+    ${a.status === "erledigt" ? `<div class="note ok" style="margin:0 0 8px">Erledigt${a.rangierteam ? " von <b>" + esc(a.rangierteam) + "</b>" : ""}: ${esc(a.erledigt_von_name || "?")}, ${zeitKurz(a.erledigt)}.</div>` : ""}
+    ${a.status === "storniert" ? `<div class="note bad" style="margin:0 0 8px">Storniert von ${esc(a.erledigt_von_name || "?")}, ${zeitKurz(a.erledigt || a.erstellt)}.</div>` : ""}
     ${a.bemerkung ? `<div class="note warn" style="margin:0 0 8px">${esc(a.bemerkung)}</div>` : ""}
     <div class="unterkopf">Wagen</div>
-    <div style="font-family:var(--mono);font-size:14px;line-height:1.7">${a.nummern.map(nr).map(esc).join("<br>")}</div>`;
-  const offen = a.status === "offen";
-  $("#afAusfuehren").parentElement.classList.toggle("hidden", !offen || !Team.darfSchreiben());
-  $("#afStorno").classList.toggle("hidden", !offen || !(Team.istAdmin() || (Team.user && a.erstellt_von === Team.user.id)));
+    <div style="font-family:var(--mono);font-size:14px;line-height:1.7">${a.nummern.map(n=>esc(formatiere(n))).join("<br>")}</div>`;
+  const schreiben = Team.darfSchreiben(), offen = a.status === "offen", arbeit = a.status === "in_arbeit";
+  $("#afAnnehmen").parentElement.classList.toggle("hidden", !(offen && schreiben));
+  $("#afAusfuehren").textContent = arbeit ? "Erledigt melden und Wagen verschieben" : "Sofort ausführen, ohne Annehmen";
+  $("#afAusfuehren").className = arbeit ? "primary" : "ghost";
+  $("#afAusfuehren").parentElement.classList.toggle("hidden", !schreiben || !(offen || (arbeit && (ichHabe || Team.istAdmin()))));
+  $("#afZurueck").parentElement.classList.toggle("hidden", !(arbeit && schreiben && (ichHabe || Team.istAdmin())));
+  $("#afStorno").classList.toggle("hidden", !(offen || arbeit) || !(Team.istAdmin() || (Team.user && a.erstellt_von === Team.user.id)));
   $("#dlgAuftrag").showModal();
 }
+$("#afAnnehmen").onclick = ()=>{
+  $("#dlgAuftrag").close();
+  $("#anTeam").value = localStorage.getItem("rangierteam") || "";
+  $("#dlgAnnehmen").showModal();
+  setTimeout(()=> $("#anTeam").focus(), 50);
+};
+$("#anAbbruch").onclick = ()=> $("#dlgAnnehmen").close();
+$("#anOk").onclick = async ()=>{
+  const a = auftragImDialog; if(!a) return;
+  const team = $("#anTeam").value.trim();
+  try{ localStorage.setItem("rangierteam", team); }catch(e){}
+  $("#dlgAnnehmen").close();
+  const {data, error} = await Team.sb.from("wl_auftraege")
+    .update({status:"in_arbeit", angenommen:new Date().toISOString(), angenommen_von:Team.user.id, angenommen_von_name:Team.name(), rangierteam:team || null})
+    .eq("id", a.id).eq("status","offen").select();
+  if(error){ await frageInfo("Annehmen nicht möglich: " + error.message); return; }
+  await auftraegeHolen(); auftraegeZeichnen();
+  if(!data || !data.length){ await frageInfo("Dieser Auftrag wurde inzwischen schon von jemand anderem angenommen oder erledigt."); return; }
+  pushSenden({art:"auftrag", titel:"Rangierauftrag angenommen", text:`${team || Team.name()} übernimmt: ${auftragText(a)}`, auftrag:a.id, tag:"auftrag-"+a.id});
+  teamMeldung(null);
+  const neu = Team.auftraege.find(x=>x.id === a.id); if(neu) auftragOeffnen(neu);
+};
+$("#afZurueck").onclick = async ()=>{
+  const a = auftragImDialog; if(!a) return;
+  if(!await frage("Auftrag zurückgeben? Er ist danach wieder offen und kann von einem anderen Team angenommen werden.")) return;
+  const {error} = await Team.sb.from("wl_auftraege")
+    .update({status:"offen", angenommen:null, angenommen_von:null, angenommen_von_name:null, rangierteam:null})
+    .eq("id", a.id).eq("status","in_arbeit");
+  if(error){ await frageInfo("Zurückgeben nicht möglich: " + error.message); return; }
+  $("#dlgAuftrag").close(); await auftraegeHolen(); auftraegeZeichnen();
+  pushSenden({art:"auftrag", titel:"Rangierauftrag wieder offen", text:`${Team.name()} hat zurückgegeben: ${auftragText(a)}`, auftrag:a.id, tag:"auftrag-"+a.id});
+};
 $("#afZu").onclick = ()=> $("#dlgAuftrag").close();
 $("#afQuelle").onclick = async ()=>{ const a = auftragImDialog; $("#dlgAuftrag").close(); if(a && await DB.hol(a.quelle_id)) oeffne(a.quelle_id); else frageInfo("Das Ausgangsgleis ist auf diesem Gerät nicht vorhanden."); };
 $("#afStorno").onclick = async ()=>{
   const a = auftragImDialog; if(!a) return;
   if(!await frage("Auftrag stornieren? Er wird für das ganze Team als storniert markiert.")) return;
-  const {error} = await Team.sb.from("wl_auftraege").update({status:"storniert", erledigt:new Date().toISOString(), erledigt_von_name:Team.name()}).eq("id", a.id).eq("status","offen");
+  const {error} = await Team.sb.from("wl_auftraege").update({status:"storniert", erledigt:new Date().toISOString(), erledigt_von_name:Team.name()}).eq("id", a.id).in("status",["offen","in_arbeit"]);
   if(error){ frageInfo("Stornieren nicht möglich: " + error.message); return; }
   $("#dlgAuftrag").close(); await auftraegeHolen(); auftraegeZeichnen();
 };
@@ -3023,8 +3098,9 @@ async function auftragAusfuehren(a){
   if(fehlt.length && !await frage(`${fehlt.length} Wagen stehen nicht auf ${a.quelle_name}: ${fehlt.map(formatiere).join(", ")}. Trotzdem die übrigen ${idx.length} Wagen verschieben?`)) return;
   // Auftrag zuerst beanspruchen, damit ihn niemand doppelt ausführt
   const {data:beansprucht, error} = await Team.sb.from("wl_auftraege")
-    .update({status:"erledigt", erledigt:new Date().toISOString(), erledigt_von_name:Team.name()})
-    .eq("id", a.id).eq("status","offen").select();
+    .update({status:"erledigt", erledigt:new Date().toISOString(), erledigt_von_name:Team.name(),
+             rangierteam: a.rangierteam || localStorage.getItem("rangierteam") || null})
+    .in("id", [a.id]).in("status", ["offen","in_arbeit"]).select();
   if(error) throw new Error(error.message);
   if(!beansprucht || !beansprucht.length){ await auftraegeHolen(); auftraegeZeichnen(); await frageInfo("Dieser Auftrag wurde inzwischen schon erledigt oder storniert."); return; }
   try{
@@ -3040,11 +3116,12 @@ async function auftragAusfuehren(a){
     }
     const r = await verschiebe(quelle, idx, ziel, a.wo, a.umdrehen, "Auftrag von " + (a.erstellt_von_name || "?"));
     await auftraegeHolen(); auftraegeZeichnen();
-    pushSenden({art:"auftrag", titel:"Rangierauftrag erledigt", text:`${Team.name()}: ${r.anzahl} Wagen ${a.quelle_name} → ${kopfzeile(r.ziel)}`, liste:r.ziel.id, tag:"auftrag-"+a.id});
+    const wer = a.rangierteam || localStorage.getItem("rangierteam") || "";
+    pushSenden({art:"auftrag", titel:"Rangierauftrag erledigt", text:`${wer ? wer + " (" + Team.name() + ")" : Team.name()}: ${r.anzahl} Wagen ${a.quelle_name} → ${kopfzeile(r.ziel)}`, liste:r.ziel.id, tag:"auftrag-"+a.id});
     await oeffne(r.ziel.id);
     melde("#teilenInfo","ok", `Auftrag ausgeführt: ${r.anzahl} Wagen von ${a.quelle_name} hierher verschoben.` + (fehlt.length ? ` ${fehlt.length} Wagen fehlten.` : ""));
   }catch(e){
-    await Team.sb.from("wl_auftraege").update({status:"offen", erledigt:null, erledigt_von_name:null}).eq("id", a.id);
+    await Team.sb.from("wl_auftraege").update({status:a.status, erledigt:null, erledigt_von_name:null, rangierteam:a.rangierteam||null}).eq("id", a.id);
     throw e;
   }
 }
