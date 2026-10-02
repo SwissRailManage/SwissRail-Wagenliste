@@ -56,6 +56,22 @@ main{padding:14px 14px 96px;max-width:1180px;margin:0 auto}
 .summe .lbl{font-size:12px;color:var(--mut)}
 .drei{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end}
 .drei label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.nurlesen .nurschreiben{display:none !important}
+body.nurlesen #viewWagen .spalteR, body.nurlesen #cropWrap, body.nurlesen #detailListe{pointer-events:none}
+body.nurlesen :is(#bahnhof,#gleis,#datum,#seiteA,#seiteB,#klasse){pointer-events:none;opacity:.75}
+.lesebalken{background:var(--warnsoft);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;margin-bottom:10px}
+.mitglied{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.mitglied:last-child{border-bottom:none}
+.mitglied select{width:auto;padding:6px 8px;font-size:14px}
+.auftragtxt{font-weight:700;font-size:14px}
+.vier{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:end}
+.vier label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unterkopf{font-size:13px;font-weight:700;color:var(--mut);margin:14px 0 2px}
+.details{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}
+.detail{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);position:relative}
+.detail img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.detail input{border:none;border-top:1px solid var(--line);border-radius:0;font-size:13px;padding:7px 8px;background:var(--card)}
+.detail .weg{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:15px;padding:0;line-height:28px}
 .einheit{position:relative}
 .einheit input{padding-right:34px}
 .einheit span{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--mut);pointer-events:none}
@@ -206,6 +222,11 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <ul class="list" id="wagenTreffer" style="margin-top:6px"></ul>
       <div class="muted hidden" id="wagenTrefferInfo" style="margin-top:6px"></div>
     </div>
+    <div class="card voll hidden" id="auftragKarte">
+      <h2>Rangieraufträge <span class="pill" id="anzAuftraege">0</span></h2>
+      <ul class="list" id="auftragListe"></ul>
+      <div class="empty hidden" id="auftragLeer">Keine offenen Aufträge.</div>
+    </div>
     <div class="card">
       <h2>Offene Listen <span class="pill" id="anzOffen">0</span></h2>
       <ul class="list" id="listen"></ul>
@@ -244,7 +265,15 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <datalist id="bahnhoefe"></datalist>
       <div class="two">
         <div><label for="datum">Datum</label><input id="datum" type="date"></div>
-        <div><label>&nbsp;</label><button id="fertigBtn" class="ghost" style="width:100%">Als erledigt markieren</button></div>
+        <div><label>&nbsp;</label><button id="fertigBtn" class="ghost nurschreiben" style="width:100%">Als erledigt markieren</button></div>
+      </div>
+      <div class="two">
+        <div><label for="klasse">Streckenklasse</label>
+          <select id="klasse">
+            <option>A</option><option>B1</option><option>B2</option><option>C2</option><option>C3</option><option>C4</option>
+            <option>D2</option><option>D3</option><option selected>D4</option>
+          </select></div>
+        <div><label>&nbsp;</label><div class="muted" style="padding-top:10px">für die Prüfung der Lastgrenzen</div></div>
       </div>
       <div id="teamListeZeile" class="hidden" style="margin-top:12px">
         <div class="muted" id="teamListeInfo"></div>
@@ -276,7 +305,7 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
     <div class="card" id="wagenKarte">
       <div class="kopfzeile2">
         <h2>Wagen <span class="pill" id="anzahl">0</span></h2>
-        <button id="auswahlBtn" class="ghost small">Rangieren</button>
+        <button id="auswahlBtn" class="ghost small nurschreiben">Rangieren</button>
       </div>
       <div class="side"><span id="lblA">Seite Basel</span><span id="lblB">Seite Zürich</span></div>
       <ul class="list" id="wagen"></ul>
@@ -284,12 +313,12 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <div class="btnrow">
         <button id="pdfBtn" class="primary">PDF erstellen</button>
         <button id="teilenBtn" class="primary">PDF teilen</button>
-        <button id="umdrehen" class="ghost">Reihenfolge umdrehen</button>
+        <button id="umdrehen" class="ghost nurschreiben">Reihenfolge umdrehen</button>
       </div>
       <div id="teilenInfo" class="note hidden"></div>
       <div class="btnrow hidden" id="teilenNochmal"><button id="teilenJetzt" class="primary">Jetzt teilen</button></div>
       <div class="btnrow">
-        <button id="massenBtn" class="ghost">Mehrere Fotos importieren</button>
+        <button id="massenBtn" class="ghost nurschreiben">Mehrere Fotos importieren</button>
       </div>
       <input id="massenInput" type="file" accept="image/*" multiple class="hidden">
       <div class="progress hidden" id="massenBar"><div></div></div>
@@ -309,12 +338,12 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       </div>
       <p class="muted hidden" id="cropTipp">Mit Finger oder Maus ein Rechteck um die Wagennummer ziehen, dann liest die App nur diesen Bereich. Das hilft bei unruhigen Fotos.</p>
       <div class="btnrow">
-        <button id="fotoBtn">Foto aufnehmen</button>
-        <button id="galerieBtn" class="ghost">Aus Galerie</button>
+        <button id="fotoBtn" class="nurschreiben">Foto aufnehmen</button>
+        <button id="galerieBtn" class="ghost nurschreiben">Aus Galerie</button>
       </div>
       <div class="btnrow">
-        <button id="ocrBtn" class="ghost">Nummer aus Foto lesen</button>
-        <button id="fotoWegBtn" class="ghost hidden" style="color:var(--red);border-color:var(--red)">Foto löschen</button>
+        <button id="ocrBtn" class="ghost nurschreiben">Nummer aus Foto lesen</button>
+        <button id="fotoWegBtn" class="ghost hidden nurschreiben" style="color:var(--red);border-color:var(--red)">Foto löschen</button>
       </div>
       <div class="btnrow hidden" id="cropReset"><button id="ganzesBild" class="ghost small">Ausschnitt aufheben</button></div>
       <input id="fotoInput" type="file" accept="image/*" capture="environment" class="hidden">
@@ -322,6 +351,14 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <div class="progress hidden" id="ocrBar"><div></div></div>
       <div id="ocrInfo" class="note hidden"></div>
       <div class="kand" id="ocrKand"></div>
+      <div class="unterkopf">Detailfotos, z. B. vom Schaden</div>
+      <div class="btnrow" style="margin-top:4px">
+        <button id="detailKamera" class="ghost small nurschreiben">Detailfoto aufnehmen</button>
+        <button id="detailGalerie" class="ghost small nurschreiben">Aus Galerie</button>
+      </div>
+      <input id="detailKameraInput" type="file" accept="image/*" capture="environment" class="hidden">
+      <input id="detailGalerieInput" type="file" accept="image/*" multiple class="hidden">
+      <div class="details" id="detailListe"></div>
       <p class="muted" id="fotoDropHinweis" style="margin-bottom:0">Am PC: Foto hierher ziehen oder mit Strg+V einfügen.</p>
     </div>
     </div>
@@ -336,13 +373,26 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <div class="zustandwahl" id="zustandWahl"></div>
     </div>
     <div class="card">
-      <h2>Länge und Gewicht</h2>
+      <h2>Länge, Gewicht und Bremse</h2>
       <div class="drei">
         <div><label for="laenge">Länge (LüP)</label><div class="einheit"><input id="laenge" inputmode="decimal" placeholder="–" autocomplete="off"><span>m</span></div></div>
         <div><label for="tara">Eigengew.</label><div class="einheit"><input id="tara" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
         <div><label for="ladung">Ladung</label><div class="einheit"><input id="ladung" inputmode="decimal" placeholder="0" autocomplete="off"><span>t</span></div></div>
       </div>
-      <p class="muted" style="margin:6px 0 0">LüP = Länge über Puffer. Länge und Eigengewicht stehen angeschrieben am Wagen.</p>
+      <div class="unterkopf">Bremsgewicht</div>
+      <div class="drei">
+        <div><label for="bremsL">leer</label><div class="einheit"><input id="bremsL" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
+        <div><label for="bremsB">beladen</label><div class="einheit"><input id="bremsB" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
+        <div><label for="hand">Handbremse</label><div class="einheit"><input id="hand" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
+      </div>
+      <div class="unterkopf">Lastgrenzen (Ladung, Streckenklasse)</div>
+      <div class="vier">
+        <div><label for="lgA">A</label><div class="einheit"><input id="lgA" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
+        <div><label for="lgB">B</label><div class="einheit"><input id="lgB" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
+        <div><label for="lgC">C</label><div class="einheit"><input id="lgC" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
+        <div><label for="lgD">D</label><div class="einheit"><input id="lgD" inputmode="decimal" placeholder="–" autocomplete="off"><span>t</span></div></div>
+      </div>
+      <p class="muted" style="margin:6px 0 0">LüP = Länge über Puffer. Alle Werte stehen angeschrieben am Wagen. Bremsgewicht: Wert für die Bremsstellung, in der gefahren wird.</p>
       <div id="massInfo" class="note hidden"></div>
     </div>
     <div class="card">
@@ -353,17 +403,17 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
       <input id="gatSuche" placeholder="z. B. Fans, Xas, Flachwagen, Schotter" autocomplete="off">
       <div class="gatliste" id="gatListe"></div>
       <div class="btnrow">
-        <button id="eigeneBtn" class="ghost">Eigene Gattung anlegen</button>
+        <button id="eigeneBtn" class="ghost nurschreiben">Eigene Gattung anlegen</button>
       </div>
       <label for="bem">Bemerkung zu diesem Wagen</label>
       <div class="bemzeile">
         <input id="bem" placeholder="z. B. beladen mit Schotter, Bremse defekt">
-        <button id="micBtn" class="ghost mic" type="button" title="Bemerkung diktieren" aria-label="Bemerkung diktieren">🎤</button>
+        <button id="micBtn" class="ghost mic nurschreiben" type="button" title="Bemerkung diktieren" aria-label="Bemerkung diktieren">🎤</button>
       </div>
       <div id="diktatInfo" class="note hidden"></div>
       <div class="btnrow">
-        <button id="speichern" class="primary">Speichern</button>
-        <button id="loeschen" class="ghost">Wagen löschen</button>
+        <button id="speichern" class="primary nurschreiben">Speichern</button>
+        <button id="loeschen" class="ghost nurschreiben">Wagen löschen</button>
       </div>
       <p class="muted" style="margin-bottom:0">Tastatur: Strg+Enter speichert.</p>
     </div>
@@ -381,7 +431,7 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
 </main>
 
 <div class="fab" id="fabHome"><button class="primary" id="neueListe">Neue Liste</button></div>
-<div class="fab hidden" id="fabListe"><button class="primary" id="neuerWagen">Wagen erfassen</button></div>
+<div class="fab hidden nurschreiben" id="fabListe"><button class="primary" id="neuerWagen">Wagen erfassen</button></div>
 <div class="leiste hidden" id="auswahlLeiste">
   <div class="text" id="auswahlText">Wagen antippen, die verschoben werden sollen</div>
   <div class="zeile">
@@ -434,11 +484,24 @@ ul.list li.monat{display:block;font-size:12px;font-weight:700;color:var(--mut);p
   <label class="radio"><input type="radio" name="rgWo" value="vorne"> <span id="rgVorneTxt">Vorne</span></label>
   <label class="radio"><input type="radio" name="rgWo" value="hinten" checked> <span id="rgHintenTxt">Hinten</span></label>
   <label class="check"><input type="checkbox" id="rgUmdrehen"> Reihenfolge der Gruppe umdrehen</label>
+  <div id="rgAuftragFelder" class="hidden">
+    <label for="rgBem">Bemerkung zum Auftrag (wenn du ihn erteilst)</label>
+    <input id="rgBem" placeholder="z. B. bis 14 Uhr, Lok 2 nehmen" autocomplete="off">
+  </div>
   <div class="note warn" id="rgVorschau"></div>
   <div class="two" style="margin-top:14px">
     <button id="rgAbbruch" class="ghost">Abbrechen</button>
     <button id="rgStart" class="primary">Verschieben</button>
   </div>
+  <button id="rgAuftrag" class="ghost hidden" style="width:100%;margin-top:8px">Als Auftrag ans Team erteilen</button>
+</div></dialog>
+
+<dialog id="dlgAuftrag"><div class="dlg">
+  <h2 id="afTitel">Rangierauftrag</h2>
+  <div id="afInhalt"></div>
+  <div class="btnrow"><button id="afAusfuehren" class="primary">Ausführen</button></div>
+  <div class="btnrow"><button id="afQuelle" class="ghost">Ausgangsgleis öffnen</button><button id="afStorno" class="ghost">Stornieren</button></div>
+  <div class="btnrow"><button id="afZu" class="ghost">Schliessen</button></div>
 </div></dialog>
 
 <dialog id="dlgVergleich"><div class="dlg">
@@ -642,6 +705,21 @@ const WAGEN_TARA_START = {
   "808598624662":31.0, "808598624282":31.0, "808598621502":31.0, "808598627178":31.0,
   "808598521348":27.1, "808598521256":28.8, "218533008833":12.0
 };
+/* Handbremsgewicht und Lastgrenzen der Serie, von den Anschriften auf den Fotos */
+const SERIE_BREMS_START = {
+  "31|6770":{hand:24.2}, "80|9862":{hand:17, lg:{A:33,B:41,C:49}}, "80|9852":{hand:23},
+  "99|9510":{hand:19, lg:{A:33,B:41,C:49,D:49}}, "21|3300":{hand:24}, "99|9552":{hand:20},
+  "31|4616":{lg:{A:39.6,B:47.6,C:55.6,D:65.6}}
+};
+/* Einzelne Wagen, deren Werte auf den Fotos lesbar sind */
+const WAGEN_BREMS_START = {
+  "808598624217":{hand:17, lg:{A:34.5,B:42.5,C:50.5}}, "808598624050":{hand:17, lg:{A:35,B:43,C:51}},
+  "808598624472":{hand:17, lg:{A:30,B:38,C:46}},       "808598624647":{hand:23, lg:{A:33,B:41,C:49}},
+  "808598624530":{hand:17, lg:{A:30,B:38,C:46}},       "808598627020":{hand:17, lg:{A:34,B:42,C:50}},
+  "808598624662":{hand:23, lg:{A:33,B:41,C:49}},       "808598621502":{hand:23, lg:{A:33,B:41,C:49}},
+  "808598521348":{hand:23, lg:{A:36.9,B:44.9,C:52.9}}, "808598521256":{hand:23, lg:{A:35.2,B:43.2,C:51.2}},
+  "998495103108":{hand:19, lg:{A:33,B:41,C:49,D:49}}
+};
 const nurZiffern = nr => (nr||"").replace(/\D/g,"");
 function zahl(t){
   if(t === null || t === undefined) return null;
@@ -653,13 +731,32 @@ function zahl(t){
 const fmt = (v, st) => v === null || v === undefined ? "–" : v.toLocaleString("de-CH", {minimumFractionDigits:st??1, maximumFractionDigits:st??2});
 function stammHol(){ try{ return JSON.parse(localStorage.getItem("wagenStamm")||"{}"); }catch(e){ return {}; } }
 function massSerieHol(){ try{ return JSON.parse(localStorage.getItem("serienMass")||"{}"); }catch(e){ return {}; } }
-function massLerne(nr, laenge, tara){
+function massLerne(nr, laenge, tara, extra){
   const z = nurZiffern(nr); if(z.length !== 12) return;
-  const st = stammHol(); st[z] = {laenge, tara};
+  const st = stammHol(); st[z] = {laenge, tara, ...(extra||{})};
+  const k0 = serieSchluessel(nr);
+  if(k0 && extra){
+    const b = bremsSerieHol(); const alt = b[k0] || {};
+    b[k0] = {bremsL: extra.bremsL ?? alt.bremsL ?? null, bremsB: extra.bremsB ?? alt.bremsB ?? null,
+             hand: extra.hand ?? alt.hand ?? null, lg: (extra.lg && Object.keys(extra.lg).length) ? extra.lg : (alt.lg || null)};
+    try{ localStorage.setItem("serienBremse", JSON.stringify(b)); }catch(e){}
+  }
   try{ localStorage.setItem("wagenStamm", JSON.stringify(st)); }catch(e){}
   const k = serieSchluessel(nr);
   if(k && laenge !== null){ const m = massSerieHol(); m[k] = {laenge, tara: tara ?? (m[k] && m[k].tara) ?? null};
     try{ localStorage.setItem("serienMass", JSON.stringify(m)); }catch(e){} }
+}
+function bremsSerieHol(){ try{ return JSON.parse(localStorage.getItem("serienBremse")||"{}"); }catch(e){ return {}; } }
+/* Bremsgewichte, Handbremse und Lastgrenzen: zuerst gleicher Wagen, dann Serie */
+function bremsFuer(nr){
+  const z = nurZiffern(nr); if(z.length < 8) return null;
+  const st = stammHol()[z] || {};
+  const k = serieSchluessel(nr);
+  const sg = (k && bremsSerieHol()[k]) || {}, ss = (k && SERIE_BREMS_START[k]) || {}, ws = WAGEN_BREMS_START[z] || {};
+  const w = (...v) => { for(const x of v) if(x !== null && x !== undefined) return x; return null; };
+  const lgOk = o => o && Object.keys(o).length ? o : null;
+  return { bremsL: w(st.bremsL, sg.bremsL), bremsB: w(st.bremsB, sg.bremsB),
+           hand: w(st.hand, ws.hand, sg.hand, ss.hand), lg: lgOk(st.lg) || lgOk(ws.lg) || lgOk(sg.lg) || lgOk(ss.lg) || null };
 }
 /* liefert {laenge, tara, quelle:"wagen"|"serie"} oder null */
 function massFuer(nr){
@@ -674,14 +771,33 @@ function massFuer(nr){
   if(laenge === null && tara === null) return null;
   return {laenge, tara, quelle: WAGEN_TARA_START[z] !== undefined ? "wagen" : "serie"};
 }
-function zugWerte(W){
-  let laenge = 0, tara = 0, ladung = 0, ohneL = 0, ohneT = 0;
-  W.forEach(w=>{
-    if(typeof w.laenge === "number") laenge += w.laenge; else ohneL++;
-    if(typeof w.tara === "number") tara += w.tara; else ohneT++;
-    if(typeof w.ladung === "number") ladung += w.ladung;
+/* Bremse und Lastgrenze eines Wagens: beladen = Ladung > 0 oder Zustand „Beladen“ */
+const num = v => typeof v === "number" && isFinite(v);
+function wagenBremse(w, klasse){
+  const beladen = (num(w.ladung) && w.ladung > 0) || w.zustand === "beladen";
+  const brems = beladen ? (num(w.bremsB) ? w.bremsB : (num(w.bremsL) ? w.bremsL : null))
+                        : (num(w.bremsL) ? w.bremsL : (num(w.bremsB) ? w.bremsB : null));
+  const buchstabe = (klasse || "D4").charAt(0);
+  const lg = w.lg && num(w.lg[buchstabe]) ? w.lg[buchstabe] : null;
+  const ladung = num(w.ladung) ? w.ladung : 0;
+  return {beladen, brems, lg, buchstabe, ueberlast: lg !== null && ladung > lg + 1e-9, reserve: lg !== null ? lg - ladung : null};
+}
+function zugWerte(W, klasse){
+  let laenge = 0, tara = 0, ladung = 0, ohneL = 0, ohneT = 0, brems = 0, ohneB = 0, hand = 0, ohneH = 0, bruttoMitBremse = 0, ohneLg = 0;
+  const ueberlast = [];
+  W.forEach((w,i)=>{
+    if(num(w.laenge)) laenge += w.laenge; else ohneL++;
+    if(num(w.tara)) tara += w.tara; else ohneT++;
+    if(num(w.ladung)) ladung += w.ladung;
+    const b = wagenBremse(w, klasse);
+    if(b.brems !== null){ brems += b.brems; if(num(w.tara)) bruttoMitBremse += w.tara + (num(w.ladung) ? w.ladung : 0); } else ohneB++;
+    if(num(w.hand)) hand += w.hand; else ohneH++;
+    if(b.lg === null && num(w.ladung) && w.ladung > 0) ohneLg++;
+    if(b.ueberlast) ueberlast.push(i);
   });
-  return {anzahl:W.length, laenge, tara, ladung, brutto:tara+ladung, ohneL, ohneT};
+  const brutto = tara + ladung;
+  const prozent = ohneB === 0 && brutto > 0 ? brems / brutto * 100 : (bruttoMitBremse > 0 ? brems / bruttoMitBremse * 100 : null);
+  return {anzahl:W.length, laenge, tara, ladung, brutto, ohneL, ohneT, brems, ohneB, prozent, hand, ohneH, ueberlast, ohneLg};
 }
 
 /* ---------------- Zustand pro Wagen ---------------- */
@@ -791,8 +907,10 @@ function wNorm(w){
 }
 
 /* ---------------- Ansichten ---------------- */
+function nurLesen(l){ return !!(l && l.team && typeof Team !== "undefined" && Team.aktiv && l.team === Team.aktiv.id && !Team.darfSchreiben()); }
 function zeige(v){
   const wechsel = document.body.dataset.ansicht !== v;
+  document.body.classList.toggle("nurlesen", (v === "liste" || v === "wagen") && nurLesen(aktuell));
   document.body.dataset.ansicht = v;
   $("#viewHome").classList.toggle("hidden", v!=="home");
   $("#viewHome").classList.toggle("aktiv", v==="home");
@@ -850,7 +968,7 @@ function listenZeile(l, mitDatum){
     } else {
       if(!await frage(`Liste "${kopfzeile(l)}" mit ${l.wagen.length} Wagen löschen?`)) return;
     }
-    for(const w of l.wagen){ if(w.fotoId) await DB.fotoWeg(w.fotoId); }
+    for(const w of l.wagen){ for(const id of alleFotoIds(w)) await DB.fotoWeg(id); }
     await DB.weg(l.id); ladeHome();
   };
   const oeff = el("button","iconbtn","›"); oeff.onclick = ()=>oeffne(l.id);
@@ -880,6 +998,7 @@ function homeZeichnen(){
     uh.appendChild(listenZeile(l, true));
   });
   $("#anzHist").textContent = fertig.length;
+  if(typeof auftraegeZeichnen === "function") auftraegeZeichnen();
   $("#histLeer").classList.toggle("hidden", fertig.length>0);
   bahnhoefeFuellen();
 }
@@ -894,7 +1013,7 @@ function neueListe(){
   $("#nlDatum").value = heute();
   $("#nlA").value = "Basel";
   $("#nlB").value = "Zürich";
-  $("#nlTeamZeile").classList.toggle("hidden", !Team.bereit());
+  $("#nlTeamZeile").classList.toggle("hidden", !Team.bereit() || !Team.darfSchreiben());
   if(Team.bereit()) $("#nlTeamZeile").lastChild.textContent = " Mit dem Team „" + Team.aktiv.name + "“ teilen";
   bahnhoefeFuellen();
   $("#dlgNeu").showModal();
@@ -904,7 +1023,7 @@ async function listeAnlegen(){
   aktuell = {id:uid(), bahnhof:$("#nlBahnhof").value.trim(), gleis:$("#nlGleis").value.trim(),
              datum:$("#nlDatum").value||heute(), seiteA:$("#nlA").value.trim()||"Basel",
              seiteB:$("#nlB").value.trim()||"Zürich", status:"offen", wagen:[], geaendert:Date.now()};
-  if(Team.bereit() && $("#nlTeam").checked){ aktuell.team = Team.aktiv.id; aktuell.sv = 0; }
+  if(Team.bereit() && Team.darfSchreiben() && $("#nlTeam").checked){ aktuell.team = Team.aktiv.id; aktuell.sv = 0; }
   aktuell = await speichereListe(aktuell);
   listen = await DB.alle();
   $("#dlgNeu").close();
@@ -920,6 +1039,7 @@ async function oeffne(id){
 async function zeichneListe(){
   bahnhoefeFuellen();
   $("#bahnhof").value = aktuell.bahnhof||"";
+  $("#klasse").value = aktuell.klasse || "D4";
   $("#gleis").value  = aktuell.gleis||"";
   $("#datum").value  = aktuell.datum||heute();
   $("#seiteA").value = aktuell.seiteA||"";
@@ -945,6 +1065,8 @@ async function zeichneListe(){
     const pillen = el("div","pillen");
     if(w.zustand){ const z = zustand(w); const b = el("span","zpill", z.txt); b.style.background = z.farbe; pillen.appendChild(b); }
     if(w.pruefen){ pillen.appendChild(el("span","badge pruefen","Nummer prüfen")); }
+    if((w.details||[]).length){ pillen.appendChild(el("span","badge", `${w.details.length} Detailfoto${w.details.length>1?"s":""}`)); }
+    if(wagenBremse(w, aktuell.klasse).ueberlast){ const b = el("span","zpill","Überlast"); b.style.background = "#C60018"; pillen.appendChild(b); }
     if(w.zustand === "schad" || w.zustand === "gesperrt"){ p.style.boxShadow = "0 0 0 2px " + zustand(w).farbe; }
     c.appendChild(nrZeile);
     const masse = [typeof w.laenge==="number" ? fmt(w.laenge)+" m" : null,
@@ -952,7 +1074,9 @@ async function zeichneListe(){
     c.appendChild(el("div","sub", [w.gc, w.bem || w.gt, masse].filter(Boolean).join(" · ")));
     if(pillen.childNodes.length) c.appendChild(pillen);
     li.appendChild(c);
-    if(auswahl){
+    if(nurLesen(aktuell)){
+      li.onclick = ()=> bearbeite(i);
+    } else if(auswahl){
       const an = auswahl.has(i);
       const k = el("div","wahl" + (an ? " an" : ""), an ? "✓" : "");
       li.appendChild(k);
@@ -974,20 +1098,25 @@ async function zeichneListe(){
   zeige("liste");
 }
 function zugZeichnen(){
-  const z = zugWerte(aktuell.wagen);
+  const z = zugWerte(aktuell.wagen, aktuell.klasse);
   const box = $("#zugSumme"); box.innerHTML = "";
   [["Wagen", String(z.anzahl)], ["Zuglänge", fmt(z.laenge)+" m"], ["Eigengewicht", fmt(z.tara)+" t"],
-   ["Ladung", fmt(z.ladung)+" t"], ["Gesamtgewicht", fmt(z.brutto)+" t"]].forEach(([l,v])=>{
+   ["Ladung", fmt(z.ladung)+" t"], ["Gesamtgewicht", fmt(z.brutto)+" t"],
+   ["Bremsgewicht", fmt(z.brems)+" t"], ["Bremshundertstel", z.prozent === null ? "–" : fmt(z.prozent,0)+" %"],
+   ["Handbremse", fmt(z.hand)+" t"]].forEach(([l,v])=>{
     const d = el("div"); d.appendChild(el("div","zahl",v)); d.appendChild(el("div","lbl",l)); box.appendChild(d);
   });
   const h = $("#zugHinweis"), fehlt = [];
   if(z.ohneL) fehlt.push(`${z.ohneL} Wagen ohne Länge`);
   if(z.ohneT) fehlt.push(`${z.ohneT} Wagen ohne Eigengewicht`);
+  if(z.ohneB) fehlt.push(`${z.ohneB} Wagen ohne Bremsgewicht` + (z.prozent !== null ? " (Bremshundertstel nur aus den übrigen Wagen)" : ""));
+  if(z.ohneLg) fehlt.push(`${z.ohneLg} beladene Wagen ohne Lastgrenze für Klasse ${(aktuell.klasse||"D4")}`);
   const schad = aktuell.wagen.filter(w=>w.zustand==="schad").length, gesp = aktuell.wagen.filter(w=>w.zustand==="gesperrt").length;
   const teile = [];
   if(schad || gesp) teile.push("Achtung: " + [schad ? `${schad} Schadwagen` : "", gesp ? `${gesp} gesperrt` : ""].filter(Boolean).join(", ") + ".");
+  if(z.ueberlast.length) teile.push(`Überlast für Streckenklasse ${aktuell.klasse||"D4"}: Wagen ${z.ueberlast.map(i=>i+1).join(", ")}.`);
   if(fehlt.length && z.anzahl) teile.push("Unvollständig: " + fehlt.join(", ") + ". Die Summen zählen nur die erfassten Werte.");
-  if(teile.length){ h.textContent = teile.join(" "); h.className = "note " + (schad||gesp ? "bad" : "warn"); }
+  if(teile.length){ h.textContent = teile.join(" "); h.className = "note " + (schad||gesp||z.ueberlast.length ? "bad" : "warn"); }
   else h.className = "note warn hidden";
 }
 function statusBtn(){
@@ -1002,6 +1131,7 @@ async function sichere(){ aktuell = await speichereListe(aktuell); }
 /* Jede Änderung an einer Liste läuft hier durch. Team-Listen werden danach gesendet.
    l.sv = Team-Version, auf der diese Fassung beruht. */
 async function speichereListe(l){
+  if(nurLesen(l)){ await frageInfo("Du hast in diesem Team nur Leserechte. Änderungen werden nicht gespeichert."); return l; }
   if(l.team){
     const db = await DB.hol(l.id);
     if(db && db.team === l.team && (db.sv||0) > (l.sv||0)){
@@ -1027,6 +1157,7 @@ async function speichereListe(l){
   return l;
 }
 
+$("#klasse").addEventListener("change", async ()=>{ aktuell.klasse = $("#klasse").value; await sichere(); zeichneListe(); });
 ["bahnhof","gleis","datum","seiteA","seiteB"].forEach(id=>{
   $("#"+id).addEventListener("change", async ()=>{
     aktuell[id] = $("#"+id).value;
@@ -1168,14 +1299,17 @@ function neuerWagen(){
   const letzte = zuletztHol()[0];
   const g = (letzte && findeGat(letzte)) || KATALOG.find(x=>x.c==="Xas");
   wEntwurf = {nr:"", gc:g.c, gt:g.t, gf:g.f, bem:"", fotoId:null, fotoData:null, rect:null,
-              laenge:null, tara:null, ladung:null, zustand:""};
+              laenge:null, tara:null, ladung:null, zustand:"", details:[], detailsWeg:[]};
   fuelleWagen();
 }
 async function bearbeite(i){
   wIndex = i;
   const w = aktuell.wagen[i];
   wEntwurf = {nr:w.nr, gc:w.gc, gt:w.gt, gf:w.gf, bem:w.bem||"", fotoId:w.fotoId, fotoData:null, rect:null, gatVonHand:true, pruefen:!!w.pruefen,
-              laenge:w.laenge??null, tara:w.tara??null, ladung:w.ladung??null, massVonHand:true, zustand:w.zustand||""};
+              laenge:w.laenge??null, tara:w.tara??null, ladung:w.ladung??null, massVonHand:true, zustand:w.zustand||"",
+              bremsL:w.bremsL??null, bremsB:w.bremsB??null, hand:w.hand??null, lg:w.lg||null,
+              details:[], detailsWeg:[]};
+  for(const d of (w.details||[])){ wEntwurf.details.push({fotoId:d.fotoId, notiz:d.notiz||"", data: await DB.foto(d.fotoId)}); }
   if(w.fotoId) wEntwurf.fotoData = await DB.foto(w.fotoId);
   fuelleWagen();
 }
@@ -1185,6 +1319,9 @@ function fuelleWagen(){
   $("#laenge").value = wEntwurf.laenge ?? "";
   $("#tara").value   = wEntwurf.tara ?? "";
   $("#ladung").value = wEntwurf.ladung ?? "";
+  $("#bremsL").value = wEntwurf.bremsL ?? ""; $("#bremsB").value = wEntwurf.bremsB ?? ""; $("#hand").value = wEntwurf.hand ?? "";
+  ["A","B","C","D"].forEach(b=> $("#lg"+b).value = (wEntwurf.lg && wEntwurf.lg[b] != null) ? wEntwurf.lg[b] : "");
+  detailsZeichnen();
   $("#massInfo").classList.add("hidden");
   zustandZeichnen();
   diktatStopp(); $("#diktatInfo").classList.add("hidden");
@@ -1197,6 +1334,40 @@ function fuelleWagen(){
   if(wEntwurf.pruefen) melde("#ocrInfo","warn","Diese Nummer wurde automatisch gelesen, aber nicht sicher erkannt. Bitte Ziffer für Ziffer mit dem Foto vergleichen und dann speichern. Damit gilt sie als geprüft.");
   zeige("wagen");
 }
+const alleFotoIds = w => [w.fotoId, ...((w.details||[]).map(d=>d.fotoId))].filter(Boolean);
+function detailsZeichnen(){
+  const box = $("#detailListe"); if(!box || !wEntwurf) return;
+  box.innerHTML = "";
+  (wEntwurf.details||[]).forEach((d,i)=>{
+    const k = el("div","detail");
+    const img = el("img"); img.alt = "Detailfoto " + (i+1); if(typeof d.data === "string") img.src = d.data;
+    const weg = el("button","weg","✕"); weg.type = "button"; weg.title = "Detailfoto entfernen";
+    weg.onclick = ()=>{ if(d.fotoId) wEntwurf.detailsWeg.push(d.fotoId); wEntwurf.details.splice(i,1); detailsZeichnen(); };
+    const n = el("input"); n.placeholder = "Notiz, z. B. Puffer beschädigt"; n.value = d.notiz || "";
+    n.addEventListener("input", ()=>{ d.notiz = n.value; });
+    k.appendChild(img); k.appendChild(weg); k.appendChild(n); box.appendChild(k);
+  });
+}
+async function detailsHinzufuegen(files){
+  for(const f of [...files].filter(f=>/^image\//.test(f.type))){
+    wEntwurf.details.push({fotoId:null, notiz:"", data: await verkleinere(f, 1600, .82)});
+  }
+  detailsZeichnen();
+}
+async function detailsSpeichern(){
+  for(const id of (wEntwurf.detailsWeg||[])){ await DB.fotoWeg(id); teamFotoWeg(aktuell, id); }
+  const out = [];
+  for(const d of (wEntwurf.details||[])){
+    if(!d.fotoId){ d.fotoId = uid(); await DB.fotoSet(d.fotoId, d.data); }
+    out.push({fotoId:d.fotoId, notiz:(d.notiz||"").trim()});
+  }
+  return out;
+}
+$("#detailKamera").onclick = ()=> $("#detailKameraInput").click();
+$("#detailGalerie").onclick = ()=> $("#detailGalerieInput").click();
+["detailKameraInput","detailGalerieInput"].forEach(id=> $("#"+id).addEventListener("change", async e=>{
+  const f = [...e.target.files]; e.target.value = ""; if(wEntwurf) await detailsHinzufuegen(f);
+}));
 function zustandZeichnen(){
   const box = $("#zustandWahl"); box.innerHTML = "";
   Object.entries(ZUSTAENDE).forEach(([k,z])=>{
@@ -1217,11 +1388,13 @@ function gattungAutomatisch(){
 function massAutomatisch(){
   if(!wEntwurf || wEntwurf.massVonHand) return;
   if(nurZiffern($("#nummer").value).length !== 12) return;
-  const m = massFuer($("#nummer").value);
-  if(!m) return;
+  const m = massFuer($("#nummer").value) || {laenge:null, tara:null, quelle:"serie"};
   let gesetzt = false;
   if(m.laenge !== null && !$("#laenge").value){ $("#laenge").value = m.laenge; gesetzt = true; }
   if(m.tara !== null && !$("#tara").value){ $("#tara").value = m.tara; gesetzt = true; }
+  const b = bremsFuer($("#nummer").value) || {};
+  [["bremsL","bremsL"],["bremsB","bremsB"],["hand","hand"]].forEach(([id,k])=>{ if(b[k] != null && !$("#"+id).value){ $("#"+id).value = b[k]; gesetzt = true; } });
+  if(b.lg) ["A","B","C","D"].forEach(x=>{ if(b.lg[x] != null && !$("#lg"+x).value){ $("#lg"+x).value = b.lg[x]; gesetzt = true; } });
   if(gesetzt) melde("#massInfo", "ok", m.quelle === "wagen"
     ? "Werte dieses Wagens übernommen. Bitte kurz mit der Anschrift vergleichen."
     : "Werte der Serie übernommen. Das Eigengewicht kann je Wagen abweichen, bitte mit der Anschrift vergleichen.");
@@ -1280,7 +1453,7 @@ if(!SR){
     }catch(e){ melde("#diktatInfo","bad","Diktieren konnte nicht gestartet werden: " + e.message); }
   };
 }
-["laenge","tara"].forEach(id=> $("#"+id).addEventListener("input", ()=>{ if(wEntwurf) wEntwurf.massVonHand = true; $("#massInfo").classList.add("hidden"); }));
+["laenge","tara","bremsL","bremsB","hand","lgA","lgB","lgC","lgD"].forEach(id=> $("#"+id).addEventListener("input", ()=>{ if(wEntwurf) wEntwurf.massVonHand = true; $("#massInfo").classList.add("hidden"); }));
 
 $("#fotoBtn").onclick = ()=> $("#fotoInput").click();
 $("#galerieBtn").onclick = ()=> $("#galerieInput").click();
@@ -1359,9 +1532,13 @@ $("#speichern").onclick = async ()=>{
   }
   const w = {nr, gc:wEntwurf.gc, gt:wEntwurf.gt, gf:wEntwurf.gf, bem:$("#bem").value.trim(), fotoId,
              laenge:zahl($("#laenge").value), tara:zahl($("#tara").value), ladung:zahl($("#ladung").value),
+             bremsL:zahl($("#bremsL").value), bremsB:zahl($("#bremsB").value), hand:zahl($("#hand").value),
+             lg:(()=>{ const o = {}; ["A","B","C","D"].forEach(x=>{ const v = zahl($("#lg"+x).value); if(v !== null) o[x] = v; }); return Object.keys(o).length ? o : null; })(),
+             details: await detailsSpeichern(),
              zustand:wEntwurf.zustand||""};
   serieLerne(nr, w.gc, w.gt, w.gf);
-  if(w.laenge !== null || w.tara !== null) massLerne(nr, w.laenge, w.tara);
+  if(w.laenge !== null || w.tara !== null || w.bremsL !== null || w.bremsB !== null || w.hand !== null || w.lg)
+    massLerne(nr, w.laenge, w.tara, {bremsL:w.bremsL, bremsB:w.bremsB, hand:w.hand, lg:w.lg});
   if(wIndex<0) aktuell.wagen.push(w); else aktuell.wagen[wIndex]=w;
   await sichere(); zeichneListe();
 };
@@ -1369,7 +1546,7 @@ $("#loeschen").onclick = async ()=>{
   if(wIndex<0) return;
   if(!await frage("Diesen Wagen aus der Liste löschen?")) return;
   const w = aktuell.wagen[wIndex];
-  if(w.fotoId){ await DB.fotoWeg(w.fotoId); teamFotoWeg(aktuell, w.fotoId); }
+  for(const id of alleFotoIds(w)){ await DB.fotoWeg(id); teamFotoWeg(aktuell, id); }
   aktuell.wagen.splice(wIndex,1);
   await sichere(); zeichneListe();
 };
@@ -2019,7 +2196,7 @@ ablegeZone($("#wagenKarte"), files=> massenImport(files));
 $("#exportBtn").onclick = async ()=>{
   const alleListen = await DB.alle();
   const fotos = {};
-  for(const l of alleListen) for(const w of l.wagen){ if(w.fotoId){ const d = await DB.foto(w.fotoId); if(d) fotos[w.fotoId] = d; } }
+  for(const l of alleListen) for(const w of l.wagen) for(const id of alleFotoIds(w)){ const d = await DB.foto(id); if(d) fotos[id] = d; }
   const paket = {app:"wagenliste", version:1, erstellt:new Date().toISOString(),
                  listen:alleListen, fotos, eigene:(await DB.eigene()),
                  gelernt:{serien:serienHol(), serienMass:massSerieHol(), wagenStamm:stammHol()}};
@@ -2099,6 +2276,9 @@ $("#auswahlVerschieben").onclick = async ()=>{
   const o = document.createElement("option"); o.value = "__neu"; o.textContent = "Neues Gleis anlegen …"; sel.appendChild(o);
   if(!rgZiele.length) sel.value = "__neu";
   $("#rgBahnhof").value = aktuell.bahnhof || ""; $("#rgGleis").value = "";
+  const auftragMoeglich = !!(aktuell.team && Team.bereit() && Team.darfSchreiben() && aktuell.team === Team.aktiv.id);
+  $("#rgAuftrag").classList.toggle("hidden", !auftragMoeglich); $("#rgAuftragFelder").classList.toggle("hidden", !auftragMoeglich);
+  $("#rgBem").value = "";
   $("#rgUmdrehen").checked = false;
   const idx = [...auswahl].sort((a,b)=>a-b);
   $("#rgQuelle").textContent = `${idx.length} Wagen von ${kopfzeile(aktuell)}, Position ${idx.map(i=>i+1).join(", ")}`;
@@ -2134,8 +2314,6 @@ async function rangierenAusfuehren(){
   if(v === "__neu" && !$("#rgGleis").value.trim()){ $("#rgGleis").focus(); return; }
   const wo = document.querySelector('input[name="rgWo"]:checked').value;
   const idx = [...auswahl].sort((a,b)=>a-b);
-  let gruppe = idx.map(i=>aktuell.wagen[i]);
-  if($("#rgUmdrehen").checked) gruppe = gruppe.slice().reverse();
   let ziel;
   if(v === "__neu"){
     ziel = {id:uid(), bahnhof:$("#rgBahnhof").value.trim(), gleis:$("#rgGleis").value.trim(), datum:heute(),
@@ -2145,14 +2323,9 @@ async function rangierenAusfuehren(){
     ziel = await DB.hol(v);
     ziel.wagen = ziel.wagen.map(wNorm);
   }
-  ziel.wagen = wo === "vorne" ? gruppe.concat(ziel.wagen) : ziel.wagen.concat(gruppe);
-  const nummern = gruppe.map(w=>w.nr || "ohne Nummer");
-  const t = Date.now();
-  aktuell.wagen = aktuell.wagen.filter((w,i)=>!auswahl.has(i));
-  (aktuell.verlauf = aktuell.verlauf || []).push({t, art:"ab", anzahl:gruppe.length, gegen:kopfzeile(ziel), nummern});
-  (ziel.verlauf = ziel.verlauf || []).push({t, art:"zu", anzahl:gruppe.length, gegen:kopfzeile(aktuell), wo, nummern});
-  ziel = await speichereListe(ziel);
-  aktuell = await speichereListe(aktuell);
+  const r = await verschiebe(aktuell, idx, ziel, wo, $("#rgUmdrehen").checked);
+  aktuell = r.quelle; ziel = r.ziel;
+  const gruppe = {length:r.anzahl};
   $("#dlgRangier").close();
   auswahl = null;
   await zeichneListe();
@@ -2164,6 +2337,20 @@ async function rangierenAusfuehren(){
   $("#teilenInfo").appendChild(b);
 }
 let zuletztVerschoben = null;
+/* Wagen (Positionen idxArr) von quelle nach ziel verschieben, beide Listen speichern */
+async function verschiebe(quelle, idxArr, ziel, wo, umdrehen, notiz){
+  const idx = [...idxArr].sort((a,b)=>a-b), wahl = new Set(idx);
+  let gruppe = idx.map(i=>quelle.wagen[i]);
+  if(umdrehen) gruppe = gruppe.slice().reverse();
+  ziel.wagen = wo === "vorne" ? gruppe.concat(ziel.wagen) : ziel.wagen.concat(gruppe);
+  const nummern = gruppe.map(w=>w.nr || "ohne Nummer"), t = Date.now();
+  quelle.wagen = quelle.wagen.filter((w,i)=>!wahl.has(i));
+  (quelle.verlauf = quelle.verlauf || []).push({t, art:"ab", anzahl:gruppe.length, gegen:kopfzeile(ziel), nummern, notiz:notiz||null});
+  (ziel.verlauf = ziel.verlauf || []).push({t, art:"zu", anzahl:gruppe.length, gegen:kopfzeile(quelle), wo, nummern, notiz:notiz||null});
+  ziel = await speichereListe(ziel);
+  quelle = await speichereListe(quelle);
+  return {quelle, ziel, anzahl:gruppe.length};
+}
 function verlaufZeichnen(){
   const v = (aktuell.verlauf || []).slice(-10).reverse();
   $("#verlaufKarte").classList.toggle("hidden", !v.length);
@@ -2175,7 +2362,7 @@ function verlaufZeichnen(){
     li.appendChild(el("div","vtxt", e.art === "ab"
       ? `${e.anzahl} Wagen abgehängt → ${e.gegen}`
       : `${e.anzahl} Wagen zugestellt von ${e.gegen}` + (e.wo === "vorne" ? " (vorne)" : " (hinten)")));
-    li.appendChild(el("div","sub", zeit + " · " + (e.nummern||[]).join(", ")));
+    li.appendChild(el("div","sub", zeit + (e.notiz ? " · " + e.notiz : "") + " · " + (e.nummern||[]).join(", ")));
     ul.appendChild(li);
   });
 }
@@ -2229,6 +2416,7 @@ const Team = {
       const m = await this.sb.from("wl_mitglieder").select("user_id, anzeigename, rolle").eq("team_id", this.aktiv.id);
       this.mitglieder = m.data || [];
       this.abonnieren();
+      auftraegeCacheLaden();
     }
   },
   abonnieren(){
@@ -2236,6 +2424,7 @@ const Team = {
     this.abmeldenKanal();
     this.kanal = this.sb.channel("wl-" + this.aktiv.id)
       .on("postgres_changes", {event:"*", schema:"public", table:"wl_listen", filter:"team_id=eq." + this.aktiv.id}, ()=> holenPlanen())
+      .on("postgres_changes", {event:"*", schema:"public", table:"wl_auftraege", filter:"team_id=eq." + this.aktiv.id}, ()=> holenPlanen())
       .subscribe();
   },
   abmeldenKanal(){ if(this.kanal && this.sb){ try{ this.sb.removeChannel(this.kanal); }catch(e){} } this.kanal = null; }
@@ -2414,14 +2603,23 @@ function teamZeichnen(){
     return;
   }
   const t = Team.aktiv;
-  const namen = Team.mitglieder.map(m=>(m.anzeigename || "ohne Namen") + (m.rolle === "admin" ? " (Admin)" : "")).join(", ");
-  box.innerHTML = `<div class="kopfzeile2" style="margin-bottom:4px"><div><b>${t.name.replace(/</g,"&lt;")}</b><div class="muted">Angemeldet als ${Team.name().replace(/</g,"&lt;")}</div></div>
+  const namen = "";
+  box.innerHTML = `<div class="kopfzeile2" style="margin-bottom:4px"><div><b>${t.name.replace(/</g,"&lt;")}</b><div class="muted">Angemeldet als ${Team.name().replace(/</g,"&lt;")} · ${ROLLEN[t.rolle] || t.rolle}</div></div>
       ${Team.teams.length > 1 ? `<select id="tkWechsel" style="width:auto">${Team.teams.map(x=>`<option value="${x.id}" ${x.id===t.id?"selected":""}>${x.name.replace(/</g,"&lt;")}</option>`).join("")}</select>` : ""}</div>
     <div class="muted" id="teamSyncZeile" style="margin:6px 0">${syncHtml()}</div>
     <label>Beitrittscode für Kollegen</label><div class="teamcode">${t.beitrittscode}</div>
     <div class="btnrow"><button id="tkEinladen" class="primary">Einladungslink teilen</button><button id="tkSync" class="ghost">Jetzt synchronisieren</button></div>
-    <p class="muted" style="margin:10px 0 0">Mitglieder: ${namen.replace(/</g,"&lt;")}</p>
+    <div id="teamAdmin"></div>
+    <div class="unterkopf">Benachrichtigungen</div>
+    <div id="pushBereich"><p class="muted" style="margin:0">wird geprüft …</p></div>
+    ${Team.istAdmin() ? `<div class="btnrow"><button id="tkVapid" class="ghost small">Schlüssel für den Benachrichtigungs-Dienst erzeugen</button></div><div id="vapidAusgabe"></div>` : ""}
     <div class="btnrow"><button id="tkAbmelden" class="ghost small">Abmelden</button><button id="tkVerlassen" class="ghost small">Team verlassen</button></div>`;
+  adminZeichnen(); pushZeichnen();
+  if($("#tkVapid")) $("#tkVapid").onclick = async ()=>{
+    const v = await vapidErzeugen();
+    $("#vapidAusgabe").innerHTML = `<div class="note warn">In Supabase unter Edge Functions → Secrets eintragen und gut aufbewahren. Den privaten Schlüssel nie weitergeben.
+      <div style="margin-top:8px;font-family:var(--mono);font-size:12px;word-break:break-all">VAPID_PUBLIC_KEY<br><b>${v.oeffentlich}</b><br><br>VAPID_PRIVATE_KEY<br><b>${v.privat}</b></div></div>`;
+  };
   if($("#tkWechsel")) $("#tkWechsel").onchange = async e=>{ localStorage.setItem("teamAktiv", e.target.value); await Team.teamsLaden(); teamZeichnen(); await syncAlles(); };
   $("#tkSync").onclick = ()=> syncAlles(true);
   $("#tkAbmelden").onclick = teamAbmelden;
@@ -2473,6 +2671,11 @@ function teamListeZeichnen(){
   zeile.classList.toggle("hidden", !sichtbar);
   if(!sichtbar) return;
   const info = $("#teamListeInfo"), btn = $("#teamListeBtn");
+  if(nurLesen(aktuell)){
+    info.innerHTML = `<div class="lesebalken">Im Team geteilt · du hast nur Leserechte</div>` + (aktuell.vonName ? "Zuletzt geändert von " + esc(aktuell.vonName) : "");
+    btn.classList.add("hidden"); return;
+  }
+  btn.classList.remove("hidden");
   if(aktuell.team){
     const fremd = !Team.aktiv || Team.aktiv.id !== aktuell.team;
     const z = fremd ? "Liste eines anderen Teams oder nicht angemeldet, Änderungen bleiben vorerst auf dem Gerät."
@@ -2506,7 +2709,7 @@ $("#teamListeBtn").onclick = async ()=>{
 async function teamListeLoeschen(l){
   const {error} = await Team.sb.from("wl_listen").delete().eq("id", l.id);
   if(error){ await frageInfo("Löschen im Team nicht möglich: " + error.message); return false; }
-  const pfade = l.wagen.filter(w=>w.fotoId).map(w=>`${l.team}/${w.fotoId}.jpg`);
+  const pfade = l.wagen.flatMap(alleFotoIds).map(id=>`${l.team}/${id}.jpg`);
   if(pfade.length) Team.sb.storage.from("wagenfotos").remove(pfade).catch(()=>{});
   return true;
 }
@@ -2541,13 +2744,13 @@ async function pushAlleIntern(){
 }
 async function fotosHochladen(l){
   const h = fotosHochHol();
-  for(const w of l.wagen){
-    if(!w.fotoId || h[w.fotoId]) continue;
-    const d = await DB.foto(w.fotoId); if(!d) continue;
+  for(const id of l.wagen.flatMap(alleFotoIds)){
+    if(h[id]) continue;
+    const d = await DB.foto(id); if(!d) continue;
     const blob = await (await fetch(d)).blob();
-    const {error} = await Team.sb.storage.from("wagenfotos").upload(`${l.team}/${w.fotoId}.jpg`, blob, {contentType:"image/jpeg", upsert:true});
+    const {error} = await Team.sb.storage.from("wagenfotos").upload(`${l.team}/${id}.jpg`, blob, {contentType:"image/jpeg", upsert:true});
     if(error && !/exist|duplicate/i.test(error.message)) throw new Error("Foto-Upload: " + error.message);
-    h[w.fotoId] = 1; fotosHochSetzen(h);
+    h[id] = 1; fotosHochSetzen(h);
   }
 }
 async function pushListe(id){
@@ -2564,6 +2767,7 @@ async function pushListe(id){
     if((jetzt.geaendert||0) === (l.geaendert||0)) jetzt.dirty = false; else pushPlanen(id);
     await DB.sichere(jetzt);
     if(aktuell && aktuell.id === id){ aktuell.sv = jetzt.sv; aktuell.svDurchPush = true; aktuell.vonName = jetzt.vonName; aktuell.dirty = jetzt.dirty; }
+    if(data.version > 1) listenMeldungPlanen(jetzt);
   } else if(data.geloescht){
     LOKALE_FELDER.forEach(k=>delete jetzt[k]);
     jetzt.konflikt = "Im Team gelöscht, als lokale Liste behalten";
@@ -2616,6 +2820,21 @@ async function holen(){
       fotosNachladen(r.daten, T);
     }
   }
+  // Mitglieder und eigene Rolle auffrischen (Admin kann sie jederzeit ändern)
+  const mg = await Team.sb.from("wl_mitglieder").select("user_id, anzeigename, rolle").eq("team_id", T);
+  if(!mg.error && mg.data){
+    Team.mitglieder = mg.data;
+    const ich = mg.data.find(m=>m.user_id === Team.user.id);
+    if(!ich){ teamMeldung("warn","Du bist nicht mehr Mitglied in diesem Team."); await teamListenLoesen(T); localStorage.removeItem("teamAktiv"); await Team.teamsLaden(); teamZeichnen(); return; }
+    if(ich.rolle !== Team.aktiv.rolle){
+      Team.aktiv.rolle = ich.rolle; const t = Team.teams.find(x=>x.id === T); if(t) t.rolle = ich.rolle;
+      teamMeldung("ok", "Deine Rolle im Team ist jetzt: " + (ROLLEN[ich.rolle] || ich.rolle) + ".");
+      setTimeout(()=>{ teamZeichnen(); const v = document.body.dataset.ansicht; if(v === "liste" || v === "wagen") zeige(v); if(v === "liste") zeichneListe(); }, 0);
+    } else if(document.body.dataset.ansicht === "home") adminZeichnen();
+  }
+  try{ await auftraegeHolen(); }
+  catch(e){ if(!Team.auftragHinweis){ Team.auftragHinweis = true; teamMeldung("warn","Rangieraufträge sind in der Datenbank noch nicht eingerichtet. Der Admin muss das aktuelle SQL-Skript ausführen."); } }
+  if(offeneListe){ const id = offeneListe; if(await DB.hol(id)){ offeneListe = null; setTimeout(()=>oeffne(id), 50); } }
   const serverIds = new Set(kopf.map(k=>k.id));
   for(const l of lokal){
     if(serverIds.has(l.id) || !(l.sv > 0)) continue;
@@ -2623,7 +2842,7 @@ async function holen(){
       LOKALE_FELDER.forEach(k=>delete l[k]); l.konflikt = "Im Team gelöscht, als lokale Liste behalten";
       await DB.sichere(l);
     } else {
-      for(const w of l.wagen){ if(w.fotoId) await DB.fotoWeg(w.fotoId); }
+      for(const w of l.wagen){ for(const id of alleFotoIds(w)) await DB.fotoWeg(id); }
       await DB.weg(l.id);
       if(aktuell && aktuell.id === l.id && document.body.dataset.ansicht !== "home"){
         aktuell = null; await ladeHome(); teamMeldung("warn", `„${kopfzeile(l)}“ wurde von einem Kollegen gelöscht.`);
@@ -2634,7 +2853,7 @@ async function holen(){
 const fotoLaden = new Set();
 async function fotosNachladen(daten, T){
   const fehlend = [];
-  for(const w of (daten.wagen||[])){ if(w.fotoId && !fotoLaden.has(w.fotoId) && !(await DB.foto(w.fotoId))) fehlend.push(w.fotoId); }
+  for(const id of (daten.wagen||[]).flatMap(alleFotoIds)){ if(!fotoLaden.has(id) && !(await DB.foto(id))) fehlend.push(id); }
   if(!fehlend.length) return;
   const h = fotosHochHol();
   for(const id of fehlend){
@@ -2671,6 +2890,301 @@ function ansichtAuffrischen(){
 window.addEventListener("online", ()=> syncAlles());
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") holenPlanen(); });
 setInterval(()=>{ if(document.visibilityState === "visible" && Team.bereit()) syncAlles(); }, 90000);
+
+/* ===================================================================
+   ROLLEN, RANGIERAUFTRÄGE UND BENACHRICHTIGUNGEN
+   =================================================================== */
+const ROLLEN = {admin:"Admin", bearbeiten:"Bearbeiten", lesen:"Nur lesen"};
+Team.darfSchreiben = function(){ return !!(this.aktiv && (this.aktiv.rolle === "admin" || this.aktiv.rolle === "bearbeiten")); };
+Team.istAdmin = function(){ return !!(this.aktiv && this.aktiv.rolle === "admin"); };
+Team.auftraege = [];
+const esc = t => String(t ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+/* ---------- Admin-Bereich in der Team-Karte ---------- */
+function adminZeichnen(){
+  const box = $("#teamAdmin"); if(!box || !Team.aktiv) return;
+  const ich = Team.user && Team.user.id;
+  if(!Team.istAdmin()){
+    box.innerHTML = `<p class="muted" style="margin:10px 0 0">Deine Rolle: <b>${ROLLEN[Team.aktiv.rolle] || Team.aktiv.rolle}</b>. Mitglieder: ${
+      esc(Team.mitglieder.map(m=>(m.anzeigename || "ohne Namen") + (m.rolle === "admin" ? " (Admin)" : m.rolle === "lesen" ? " (nur lesen)" : "")).join(", "))}</p>`;
+    return;
+  }
+  box.innerHTML = `<div class="unterkopf">Mitglieder und Rollen</div>` + Team.mitglieder.map(m=>`
+    <div class="mitglied"><div class="grow"><b>${esc(m.anzeigename || "ohne Namen")}</b>${m.user_id === ich ? " <span class='muted'>(du)</span>" : ""}</div>
+      <select data-user="${m.user_id}">${Object.entries(ROLLEN).map(([k,v])=>`<option value="${k}" ${m.rolle===k?"selected":""}>${v}</option>`).join("")}</select>
+      ${m.user_id === ich ? "" : `<button class="iconbtn" data-weg="${m.user_id}" title="Aus dem Team entfernen">🗑</button>`}
+    </div>`).join("") + `
+    <p class="muted" style="margin:6px 0 0">Bearbeiten: Listen und Aufträge ändern. Nur lesen: alles sehen, nichts ändern.</p>
+    <div class="btnrow"><button id="tkCodeNeu" class="ghost small">Beitrittscode erneuern</button></div>`;
+  box.querySelectorAll("select[data-user]").forEach(sel=> sel.onchange = async ()=>{
+    const {error} = await Team.sb.rpc("wl_mitglied_rolle", {p_team:Team.aktiv.id, p_user:sel.dataset.user, p_rolle:sel.value});
+    if(error){ teamMeldung("bad", error.message); }
+    else teamMeldung("ok", "Rolle geändert.");
+    await Team.teamsLaden(); teamZeichnen(); ansichtAuffrischen();
+  });
+  box.querySelectorAll("button[data-weg]").forEach(b=> b.onclick = async ()=>{
+    const m = Team.mitglieder.find(x=>x.user_id === b.dataset.weg);
+    if(!await frage(`${m && m.anzeigename || "Dieses Mitglied"} aus dem Team entfernen? Die Person sieht danach keine Team-Listen mehr.`)) return;
+    const {error} = await Team.sb.rpc("wl_mitglied_entfernen", {p_team:Team.aktiv.id, p_user:b.dataset.weg});
+    teamMeldung(error ? "bad" : "ok", error ? error.message : "Mitglied entfernt.");
+    await Team.teamsLaden(); teamZeichnen();
+  });
+  $("#tkCodeNeu").onclick = async ()=>{
+    if(!await frage("Beitrittscode erneuern? Der alte Code und alle bisherigen Einladungslinks funktionieren danach nicht mehr. Wer schon im Team ist, bleibt drin.")) return;
+    const {data, error} = await Team.sb.rpc("wl_code_erneuern", {p_team:Team.aktiv.id});
+    teamMeldung(error ? "bad" : "ok", error ? error.message : `Neuer Beitrittscode: ${data}. Teile den neuen Einladungslink.`);
+    await Team.teamsLaden(); teamZeichnen();
+  };
+}
+
+/* ---------- Rangieraufträge ---------- */
+function auftragText(a){ return `${a.nummern.length} Wagen: ${a.quelle_name || "?"} → ${a.ziel_name || "?"}`; }
+function zeitKurz(t){ const d = new Date(t); return d.toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"}); }
+function auftraegeCacheLaden(){
+  if(!Team.aktiv) return;
+  try{ Team.auftraege = JSON.parse(localStorage.getItem("auftraege:" + Team.aktiv.id) || "[]"); }catch(e){ Team.auftraege = []; }
+}
+async function auftraegeHolen(){
+  if(!Team.bereit()) return;
+  const T = Team.aktiv.id;
+  const {data, error} = await Team.sb.from("wl_auftraege").select("*").eq("team_id", T).order("erstellt", {ascending:false}).limit(60);
+  if(error) throw new Error(error.message);
+  Team.auftraege = data || [];
+  try{ localStorage.setItem("auftraege:" + T, JSON.stringify(Team.auftraege)); }catch(e){}
+  if(offenerAuftrag){ const a = Team.auftraege.find(x=>x.id === offenerAuftrag); if(a){ offenerAuftrag = null; auftragOeffnen(a); } }
+}
+function auftraegeZeichnen(){
+  const karte = $("#auftragKarte"); if(!karte) return;
+  karte.classList.toggle("hidden", !Team.aktiv);
+  if(!Team.aktiv) return;
+  const offen = Team.auftraege.filter(a=>a.status === "offen");
+  const fertig = Team.auftraege.filter(a=>a.status !== "offen").slice(0,3);
+  $("#anzAuftraege").textContent = offen.length;
+  const ul = $("#auftragListe"); ul.innerHTML = "";
+  [...offen, ...fertig].forEach(a=>{
+    const li = el("li");
+    const g = el("div","grow");
+    g.appendChild(el("div","auftragtxt", auftragText(a)));
+    g.appendChild(el("div","sub", `${a.erstellt_von_name || "?"} · ${zeitKurz(a.erstellt)} · ${a.wo === "vorne" ? "vorne" : "hinten"} anhängen` +
+                              (a.umdrehen ? " · umgedreht" : "") + (a.bemerkung ? " · " + a.bemerkung : "")));
+    if(a.status !== "offen"){
+      li.style.opacity = ".6";
+      g.appendChild(el("div","sub", a.status === "erledigt" ? `erledigt von ${a.erledigt_von_name || "?"}` : "storniert"));
+    }
+    li.appendChild(g); li.appendChild(el("span","iconbtn","›"));
+    li.onclick = ()=> auftragOeffnen(a);
+    ul.appendChild(li);
+  });
+  $("#auftragLeer").classList.toggle("hidden", offen.length + fertig.length > 0);
+}
+let offenerAuftrag = null, auftragImDialog = null;
+function auftragOeffnen(a){
+  auftragImDialog = a;
+  $("#afTitel").textContent = a.status === "offen" ? "Rangierauftrag" : (a.status === "erledigt" ? "Rangierauftrag (erledigt)" : "Rangierauftrag (storniert)");
+  const nr = n => formatiere(n);
+  $("#afInhalt").innerHTML = `
+    <p style="margin:0 0 6px"><b>${esc(auftragText(a))}</b></p>
+    <p class="muted" style="margin:0 0 8px">${a.wo === "vorne" ? "Vorne" : "Hinten"} anhängen${a.umdrehen ? ", Gruppe umgedreht" : ""}.
+      Erteilt von ${esc(a.erstellt_von_name || "?")}, ${zeitKurz(a.erstellt)}.${a.status === "erledigt" ? ` Erledigt von ${esc(a.erledigt_von_name || "?")}, ${zeitKurz(a.erledigt)}.` : ""}</p>
+    ${a.bemerkung ? `<div class="note warn" style="margin:0 0 8px">${esc(a.bemerkung)}</div>` : ""}
+    <div class="unterkopf">Wagen</div>
+    <div style="font-family:var(--mono);font-size:14px;line-height:1.7">${a.nummern.map(nr).map(esc).join("<br>")}</div>`;
+  const offen = a.status === "offen";
+  $("#afAusfuehren").parentElement.classList.toggle("hidden", !offen || !Team.darfSchreiben());
+  $("#afStorno").classList.toggle("hidden", !offen || !(Team.istAdmin() || (Team.user && a.erstellt_von === Team.user.id)));
+  $("#dlgAuftrag").showModal();
+}
+$("#afZu").onclick = ()=> $("#dlgAuftrag").close();
+$("#afQuelle").onclick = async ()=>{ const a = auftragImDialog; $("#dlgAuftrag").close(); if(a && await DB.hol(a.quelle_id)) oeffne(a.quelle_id); else frageInfo("Das Ausgangsgleis ist auf diesem Gerät nicht vorhanden."); };
+$("#afStorno").onclick = async ()=>{
+  const a = auftragImDialog; if(!a) return;
+  if(!await frage("Auftrag stornieren? Er wird für das ganze Team als storniert markiert.")) return;
+  const {error} = await Team.sb.from("wl_auftraege").update({status:"storniert", erledigt:new Date().toISOString(), erledigt_von_name:Team.name()}).eq("id", a.id).eq("status","offen");
+  if(error){ frageInfo("Stornieren nicht möglich: " + error.message); return; }
+  $("#dlgAuftrag").close(); await auftraegeHolen(); auftraegeZeichnen();
+};
+$("#afAusfuehren").onclick = async ()=>{
+  const a = auftragImDialog; if(!a) return;
+  $("#dlgAuftrag").close();
+  beschaeftigt++;
+  try{ await auftragAusfuehren(a); }
+  catch(e){ frageInfo("Ausführen nicht möglich: " + e.message); }
+  finally{ beschaeftigt--; }
+};
+async function auftragAusfuehren(a){
+  if(!Team.bereit()){ await frageInfo("Für Aufträge braucht es eine Internetverbindung und eine Anmeldung."); return; }
+  await syncAlles();
+  let quelle = await DB.hol(a.quelle_id);
+  if(!quelle){ await frageInfo("Das Ausgangsgleis „" + (a.quelle_name||"") + "“ ist auf diesem Gerät nicht vorhanden. Es wurde vielleicht gelöscht."); return; }
+  quelle.wagen = quelle.wagen.map(wNorm);
+  const idx = [], fehlt = [];
+  a.nummern.forEach(n=>{ const i = quelle.wagen.findIndex((w,j)=> nurZiffern(w.nr) === n && !idx.includes(j)); if(i >= 0) idx.push(i); else fehlt.push(n); });
+  if(!idx.length){ await frageInfo(`Keiner der Wagen steht noch auf ${a.quelle_name}. Vielleicht wurde der Auftrag schon von Hand ausgeführt.`); return; }
+  if(fehlt.length && !await frage(`${fehlt.length} Wagen stehen nicht auf ${a.quelle_name}: ${fehlt.map(formatiere).join(", ")}. Trotzdem die übrigen ${idx.length} Wagen verschieben?`)) return;
+  // Auftrag zuerst beanspruchen, damit ihn niemand doppelt ausführt
+  const {data:beansprucht, error} = await Team.sb.from("wl_auftraege")
+    .update({status:"erledigt", erledigt:new Date().toISOString(), erledigt_von_name:Team.name()})
+    .eq("id", a.id).eq("status","offen").select();
+  if(error) throw new Error(error.message);
+  if(!beansprucht || !beansprucht.length){ await auftraegeHolen(); auftraegeZeichnen(); await frageInfo("Dieser Auftrag wurde inzwischen schon erledigt oder storniert."); return; }
+  try{
+    let ziel;
+    if(a.ziel_id){
+      ziel = await DB.hol(a.ziel_id);
+      if(!ziel) throw new Error("Das Zielgleis „" + (a.ziel_name||"") + "“ ist auf diesem Gerät nicht vorhanden");
+      ziel.wagen = ziel.wagen.map(wNorm);
+    } else {
+      const z = a.ziel_neu || {};
+      ziel = {id:uid(), bahnhof:z.bahnhof || quelle.bahnhof || "", gleis:z.gleis || "", datum:heute(), seiteA:quelle.seiteA, seiteB:quelle.seiteB,
+              klasse:quelle.klasse, status:"offen", wagen:[], geaendert:Date.now(), team:quelle.team, sv:0};
+    }
+    const r = await verschiebe(quelle, idx, ziel, a.wo, a.umdrehen, "Auftrag von " + (a.erstellt_von_name || "?"));
+    await auftraegeHolen(); auftraegeZeichnen();
+    pushSenden({art:"auftrag", titel:"Rangierauftrag erledigt", text:`${Team.name()}: ${r.anzahl} Wagen ${a.quelle_name} → ${kopfzeile(r.ziel)}`, liste:r.ziel.id, tag:"auftrag-"+a.id});
+    await oeffne(r.ziel.id);
+    melde("#teilenInfo","ok", `Auftrag ausgeführt: ${r.anzahl} Wagen von ${a.quelle_name} hierher verschoben.` + (fehlt.length ? ` ${fehlt.length} Wagen fehlten.` : ""));
+  }catch(e){
+    await Team.sb.from("wl_auftraege").update({status:"offen", erledigt:null, erledigt_von_name:null}).eq("id", a.id);
+    throw e;
+  }
+}
+$("#rgAuftrag").onclick = async ()=>{
+  const v = $("#rgZiel").value;
+  if(v === "__neu" && !$("#rgGleis").value.trim()){ $("#rgGleis").focus(); return; }
+  const idx = [...auswahl].sort((a,b)=>a-b), gruppe = idx.map(i=>aktuell.wagen[i]);
+  const ohne = gruppe.filter(w=>nurZiffern(w.nr).length !== 12).length;
+  if(ohne){ await frageInfo(`${ohne} der ausgewählten Wagen haben keine vollständige Nummer. Für einen Auftrag braucht jeder Wagen seine Nummer.`); return; }
+  let ziel_id = null, ziel_name, ziel_neu = null;
+  if(v === "__neu"){
+    ziel_neu = {bahnhof:$("#rgBahnhof").value.trim(), gleis:$("#rgGleis").value.trim()};
+    ziel_name = [ziel_neu.bahnhof, "Gleis " + ziel_neu.gleis].filter(Boolean).join(" · ");
+  } else {
+    const z = rgZiele.find(l=>l.id === v);
+    if(!z || z.team !== aktuell.team){ await frageInfo("Das Zielgleis ist nicht im Team geteilt. Teile es zuerst mit dem Team oder wähle „Neues Gleis anlegen“."); return; }
+    ziel_id = z.id; ziel_name = kopfzeile(z);
+  }
+  const wo = document.querySelector('input[name="rgWo"]:checked').value;
+  const zeile = {team_id:aktuell.team, quelle_id:aktuell.id, quelle_name:kopfzeile(aktuell), ziel_id, ziel_name, ziel_neu,
+                 nummern:gruppe.map(w=>nurZiffern(w.nr)), wo, umdrehen:$("#rgUmdrehen").checked,
+                 bemerkung:$("#rgBem").value.trim() || null, erstellt_von:Team.user.id, erstellt_von_name:Team.name()};
+  await pushAlle();
+  const {data, error} = await Team.sb.from("wl_auftraege").insert(zeile).select().single();
+  if(error){ await frageInfo("Auftrag konnte nicht erteilt werden: " + error.message); return; }
+  Team.auftraege.unshift(data);
+  $("#dlgRangier").close(); auswahl = null; await zeichneListe();
+  melde("#teilenInfo","ok", `Auftrag erteilt: ${auftragText(data)}. Er erscheint bei allen im Team auf der Startseite.`);
+  pushSenden({art:"auftrag", titel:"Neuer Rangierauftrag", text:auftragText(data) + (data.bemerkung ? " · " + data.bemerkung : ""), auftrag:data.id, tag:"auftrag-"+data.id});
+};
+
+/* ---------- Benachrichtigungen ---------- */
+let swReg = null;
+const istIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const istInstalliert = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const pushMoeglich = () => !!(swReg && "PushManager" in window && "Notification" in window);
+async function hintergrundStarten(){
+  if(!("serviceWorker" in navigator)) return;
+  const sicher = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  if(!sicher || /claude\.(ai|site)$|claudeusercontent\.com$/.test(location.hostname)) return;
+  try{ swReg = await navigator.serviceWorker.register("sw.js"); }catch(e){ swReg = null; }
+  navigator.serviceWorker.addEventListener("message", e=>{ const d = e.data || {}; if(d.art === "oeffnen") zielOeffnen(d); });
+}
+function zielOeffnen(d){
+  if(d.liste){ DB.hol(d.liste).then(l=>{ if(l) oeffne(d.liste); else { offeneListe = d.liste; holenPlanen(); } }); }
+  else if(d.auftrag){
+    const a = (Team.auftraege||[]).find(x=>x.id === d.auftrag);
+    if(a) auftragOeffnen(a); else { offenerAuftrag = d.auftrag; holenPlanen(); }
+  }
+}
+let offeneListe = null;
+function sprungzielPruefen(){
+  const h = location.hash || "";
+  const m = h.match(/^#(liste|auftrag)=(.+)$/);
+  if(!m) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  zielOeffnen({[m[1]]: decodeURIComponent(m[2])});
+}
+function pushEinstellungen(){ try{ return JSON.parse(localStorage.getItem("pushEinstellungen") || '{"listen":true,"auftraege":true}'); }catch(e){ return {listen:true, auftraege:true}; } }
+async function funktionAufrufen(body){
+  const k = Team.konfig(); if(!k || !Team.sb) return null;
+  const {data:{session}} = await Team.sb.auth.getSession();
+  if(!session) return null;
+  const r = await fetch(k.url.replace(/\/+$/,"") + "/functions/v1/wl-push", {method:"POST",
+    headers:{"Content-Type":"application/json", apikey:k.key, Authorization:"Bearer " + session.access_token}, body:JSON.stringify(body)});
+  let j = null; try{ j = await r.json(); }catch(e){}
+  if(!r.ok) throw new Error((j && (j.fehler || j.message || j.msg)) || ("Fehler " + r.status));
+  return j;
+}
+function pushSenden(body){
+  if(!Team.bereit()) return;
+  funktionAufrufen({team:Team.aktiv.id, ...body}).catch(()=>{});   // Benachrichtigungen sind freiwillig, Fehler stören nicht
+}
+const zuletztGemeldet = {};
+function listenMeldungPlanen(l){
+  const jetzt = Date.now();
+  if(zuletztGemeldet[l.id] && jetzt - zuletztGemeldet[l.id] < 3 * 60 * 1000) return;   // höchstens alle 3 Minuten pro Liste
+  zuletztGemeldet[l.id] = jetzt;
+  pushSenden({art:"liste", titel:kopfzeile(l), text:`${Team.name()} hat die Liste geändert (${l.wagen.length} Wagen)`, liste:l.id, tag:"liste-"+l.id});
+}
+const b64zuBytes = s => { const p = "=".repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g,"+").replace(/_/g,"/")); return Uint8Array.from(b, c=>c.charCodeAt(0)); };
+async function pushZeichnen(){
+  const box = $("#pushBereich"); if(!box || !Team.aktiv) return;
+  if(istIOS && !istInstalliert()){
+    box.innerHTML = `<p class="muted" style="margin:0">Auf dem iPhone oder iPad gibt es Benachrichtigungen nur, wenn die App über „Zum Home-Bildschirm“ installiert ist und von dort geöffnet wird.</p>`; return;
+  }
+  if(!pushMoeglich()){
+    box.innerHTML = `<p class="muted" style="margin:0">In diesem Browser sind Benachrichtigungen nicht möglich. Öffne die App über ${esc(APP_ADRESSE)} in Chrome, Edge oder Safari.</p>`; return;
+  }
+  const abo = await swReg.pushManager.getSubscription();
+  const e = pushEinstellungen();
+  if(!abo || Notification.permission !== "granted"){
+    box.innerHTML = `<p class="muted" style="margin:0">Erhalte eine Meldung, wenn Kollegen Listen ändern oder Aufträge erteilen.</p>
+      <div class="btnrow"><button id="pushAn" class="ghost">Benachrichtigungen einschalten</button></div>`;
+    $("#pushAn").onclick = pushEinschalten; return;
+  }
+  box.innerHTML = `<p style="margin:0 0 4px">Benachrichtigungen sind auf diesem Gerät eingeschaltet.</p>
+    <label class="check" style="margin-top:4px"><input type="checkbox" id="pushListen" ${e.listen?"checked":""}> bei Änderungen an Listen</label>
+    <label class="check" style="margin-top:4px"><input type="checkbox" id="pushAuftraege" ${e.auftraege?"checked":""}> bei Rangieraufträgen</label>
+    <div class="btnrow"><button id="pushAus" class="ghost small">Ausschalten</button></div>`;
+  const speichern = async ()=>{
+    const neu = {listen:$("#pushListen").checked, auftraege:$("#pushAuftraege").checked};
+    localStorage.setItem("pushEinstellungen", JSON.stringify(neu));
+    await aboSpeichern(abo, neu);
+  };
+  $("#pushListen").onchange = speichern; $("#pushAuftraege").onchange = speichern;
+  $("#pushAus").onclick = async ()=>{
+    await Team.sb.from("wl_push_abos").delete().eq("endpoint", abo.endpoint);
+    try{ await abo.unsubscribe(); }catch(e){}
+    teamMeldung("ok","Benachrichtigungen ausgeschaltet."); pushZeichnen();
+  };
+  aboSpeichern(abo, e).catch(()=>{});
+}
+async function aboSpeichern(abo, e){
+  const {error} = await Team.sb.from("wl_push_abos").upsert({endpoint:abo.endpoint, user_id:Team.user.id, team_id:Team.aktiv.id,
+                   abo:abo.toJSON(), listen:!!e.listen, auftraege:!!e.auftraege});
+  if(error) throw new Error(error.message);
+}
+async function pushEinschalten(){
+  try{
+    const erlaubnis = await Notification.requestPermission();
+    if(erlaubnis !== "granted"){ teamMeldung("warn","Benachrichtigungen wurden nicht erlaubt. Du kannst das in den Browser-Einstellungen für diese Seite ändern."); return; }
+    let schluessel = null;
+    try{ const j = await funktionAufrufen({aktion:"schluessel"}); schluessel = j && j.schluessel; }
+    catch(e){ teamMeldung("bad","Der Benachrichtigungs-Dienst ist noch nicht eingerichtet (" + e.message + "). Der Admin muss die Funktion „wl-push“ in Supabase anlegen, siehe Anleitung."); return; }
+    if(!schluessel){ teamMeldung("bad","Der Benachrichtigungs-Dienst liefert keinen Schlüssel. Der Admin muss VAPID_PUBLIC_KEY in Supabase setzen."); return; }
+    const abo = await swReg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64zuBytes(schluessel)});
+    await aboSpeichern(abo, pushEinstellungen());
+    teamMeldung("ok","Benachrichtigungen sind eingeschaltet.");
+  }catch(e){ teamMeldung("bad","Einschalten nicht möglich: " + e.message); }
+  pushZeichnen();
+}
+/* Für den Admin: Schlüsselpaar für den Benachrichtigungs-Dienst erzeugen */
+async function vapidErzeugen(){
+  const k = await crypto.subtle.generateKey({name:"ECDSA", namedCurve:"P-256"}, true, ["sign","verify"]);
+  const pub = new Uint8Array(await crypto.subtle.exportKey("raw", k.publicKey));
+  const jwk = await crypto.subtle.exportKey("jwk", k.privateKey);
+  const b64 = u => btoa(String.fromCharCode(...u)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return {oeffentlich:b64(pub), privat:jwk.d};
+}
 
 /* ---------------- Wagen suchen über alle Listen ---------------- */
 async function wagenSuchen(){
@@ -2770,6 +3284,13 @@ function exportZeilen(){
     "Länge ü. Puffer (m)": w.laenge ?? null, "Eigengewicht (t)": w.tara ?? null, "Ladung (t)": w.ladung ?? null,
     "Gesamtgewicht (t)": (typeof w.tara==="number" || typeof w.ladung==="number") ? +(((w.tara||0)+(w.ladung||0)).toFixed(2)) : null,
     "Zustand": w.zustand ? zustand(w).txt : "",
+    "Bremsgewicht leer (t)": w.bremsL ?? null, "Bremsgewicht beladen (t)": w.bremsB ?? null,
+    "Bremsgewicht verwendet (t)": wagenBremse(w, aktuell.klasse).brems, "Handbremsgewicht (t)": w.hand ?? null,
+    "Lastgrenze A (t)": (w.lg && w.lg.A) ?? null, "Lastgrenze B (t)": (w.lg && w.lg.B) ?? null,
+    "Lastgrenze C (t)": (w.lg && w.lg.C) ?? null, "Lastgrenze D (t)": (w.lg && w.lg.D) ?? null,
+    ["Lastgrenze Streckenklasse " + (aktuell.klasse||"D4") + " (t)"]: wagenBremse(w, aktuell.klasse).lg,
+    "Überlast": wagenBremse(w, aktuell.klasse).ueberlast ? "ja" : "",
+    "Detailfotos": (w.details||[]).length || "",
     "Seite": i===0 ? (aktuell.seiteA||"") : (i===n-1 ? (aktuell.seiteB||"") : "")
   }));
 }
@@ -2785,9 +3306,11 @@ function csvErstellen(){
   const zeilen = exportZeilen(); if(!zeilen.length) return null;
   const kopf = Object.keys(zeilen[0]);
   const zelle = v => { if(v === null || v === undefined) return ""; const s = String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
-  const z = zugWerte(aktuell.wagen);
+  const z = zugWerte(aktuell.wagen, aktuell.klasse);
   const meta = [["Bahnhof", aktuell.bahnhof||""], ["Gleis", aktuell.gleis||""], ["Datum", (aktuell.datum||"").split("-").reverse().join(".")],
-                ["Zuglänge (m)", z.laenge.toFixed(2)], ["Gesamtgewicht (t)", z.brutto.toFixed(2)], []];
+                ["Streckenklasse", aktuell.klasse||"D4"], ["Zuglänge (m)", z.laenge.toFixed(2)], ["Gesamtgewicht (t)", z.brutto.toFixed(2)],
+                ["Bremsgewicht (t)", z.brems.toFixed(2)], ["Bremshundertstel (%)", z.prozent === null ? "" : z.prozent.toFixed(0)],
+                ["Handbremsgewicht (t)", z.hand.toFixed(2)], []];
   const text = meta.map(r=>r.map(zelle).join(";")).join("\r\n") + "\r\n" + kopf.join(";") + "\r\n" +
                zeilen.map(r=>kopf.map(k=>zelle(r[k])).join(";")).join("\r\n");
   return new Blob(["\ufeff" + text], {type:"text/csv;charset=utf-8"});
@@ -2817,15 +3340,18 @@ $("#xlsxBtn").onclick = async ()=>{
     const X = await ladeXlsx();
     const wb = X.utils.book_new();
     const ws = X.utils.json_to_sheet(zeilen);
-    ws["!cols"] = [{wch:5},{wch:18},{wch:12},{wch:28},{wch:28},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10}];
+    ws["!cols"] = [{wch:5},{wch:18},{wch:12},{wch:28},{wch:28},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}];
     X.utils.book_append_sheet(wb, ws, "Wagenliste");
-    const z = zugWerte(aktuell.wagen);
+    const z = zugWerte(aktuell.wagen, aktuell.klasse);
     const ang = X.utils.aoa_to_sheet([
       ["Bahnhof", aktuell.bahnhof||""], ["Gleis", aktuell.gleis||""], ["Datum", (aktuell.datum||"").split("-").reverse().join(".")],
       ["Seite bei Wagen 1", aktuell.seiteA||""], ["Seite beim letzten Wagen", aktuell.seiteB||""], [],
       ["Anzahl Wagen", z.anzahl], ["Zuglänge (m)", +z.laenge.toFixed(2)], ["Eigengewicht (t)", +z.tara.toFixed(2)],
       ["Ladung (t)", +z.ladung.toFixed(2)], ["Gesamtgewicht (t)", +z.brutto.toFixed(2)],
-      ["Wagen ohne Länge", z.ohneL], ["Wagen ohne Eigengewicht", z.ohneT], [],
+      ["Streckenklasse", aktuell.klasse||"D4"], ["Bremsgewicht (t)", +z.brems.toFixed(2)],
+      ["Bremshundertstel (%)", z.prozent === null ? "" : +z.prozent.toFixed(0)], ["Handbremsgewicht (t)", +z.hand.toFixed(2)],
+      ["Wagen mit Überlast", z.ueberlast.map(i=>i+1).join(", ")],
+      ["Wagen ohne Länge", z.ohneL], ["Wagen ohne Eigengewicht", z.ohneT], ["Wagen ohne Bremsgewicht", z.ohneB], [],
       ["Hinweis", "Richtwerte aus den erfassten Angaben. Ersetzt keine Bremsrechnung."]
     ]);
     ang["!cols"] = [{wch:26},{wch:40}];
@@ -2931,9 +3457,10 @@ async function bauePdf(){
     doc.setFont("helvetica","normal"); doc.setFontSize(10); text("#444441");
     doc.text((`${n} ${n===1 ? "Einheit" : "Einheiten"} · ${summe}`).slice(0,160), M, 64);
     doc.setFontSize(9); text("#5F5E5A");
-    const zw = zugWerte(W);
-    doc.text(`Zuglänge ${fmt(zw.laenge)} m  ·  Eigengewicht ${fmt(zw.tara)} t  ·  Ladung ${fmt(zw.ladung)} t  ·  Gesamtgewicht ${fmt(zw.brutto)} t` +
-             (zw.ohneL||zw.ohneT ? "  (unvollständig)" : "") + "  ·  Richtwerte, ersetzt keine Bremsrechnung", M, 78);
+    const zw = zugWerte(W, aktuell.klasse);
+    doc.text(`Zuglänge ${fmt(zw.laenge)} m  ·  Gesamtgewicht ${fmt(zw.brutto)} t  ·  Bremsgewicht ${fmt(zw.brems)} t` +
+             (zw.prozent !== null ? ` (${fmt(zw.prozent,0)} %)` : "") + `  ·  Handbremse ${fmt(zw.hand)} t  ·  Streckenklasse ${aktuell.klasse||"D4"}` +
+             (zw.ohneL||zw.ohneT||zw.ohneB ? "  (unvollständig)" : "") + "  ·  Richtwerte, ersetzt keine Bremsrechnung", M, 78);
     doc.text("Leserichtung: Reihe für Reihe von links nach rechts.", PW-M, 64, {align:"right"});
     const bw = (PW-2*M-(proReihe-1)*5)/proReihe, bh = 62, rowh = 106, top = 104;
     if(start===0){
@@ -2957,7 +3484,11 @@ async function bauePdf(){
       doc.setFont("helvetica","normal");
       let gs = 7.5; const gc = w.gc || "";
       while(doc.getStringUnitWidth(gc)*gs > bw-8 && gs > 5) gs -= .25;
-      doc.setFontSize(gs); doc.text(gc, x+bw/2, y+54, {align:"center"});
+      if(wagenBremse(w, aktuell.klasse).ueberlast){
+        doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(198,0,24);
+        doc.text("ÜBERLAST", x+bw/2, y+54, {align:"center"});
+        draw("#C60018"); doc.setLineWidth(1.6); doc.roundedRect(x+2, y+2, bw-4, bh-4, 3, 3, "S");
+      } else { doc.setFontSize(gs); doc.text(gc, x+bw/2, y+54, {align:"center"}); }
       draw("#444441"); doc.setLineWidth(1); fill("#FFFFFF");
       doc.circle(x+14, y+bh+6, 4.5, "FD"); doc.circle(x+bw-14, y+bh+6, 4.5, "FD");
       if(w.zustand){
@@ -3065,7 +3596,7 @@ async function bauePdf(){
       doc.text(bem.slice(0, w.zustand ? 34 : 42), bx, y);
     });
     if(start+proTab >= n){
-      const zw = zugWerte(W);
+      const zw = zugWerte(W, aktuell.klasse);
       y += rh + 2;
       draw("#2C2C2A"); doc.setLineWidth(.8); doc.line(M, y-11, PW-M, y-11);
       text("#2C2C2A"); doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
@@ -3079,9 +3610,58 @@ async function bauePdf(){
     }
   }
 
-  /* Fotoseiten */
+  /* Bremse und Lastgrenzen */
+  const zb = zugWerte(W, aktuell.klasse), kl = aktuell.klasse || "D4";
+  for(let start=0; start<n; start+=30){
+    kopf("Bremse und Lastgrenzen");
+    const c = [M, M+38, M+190, M+275, M+340, M+410, M+480, M+560, M+640];
+    let y = 70;
+    fill("#2C2C2A"); doc.rect(M, y-12, PW-2*M, 18, "F");
+    text("#FFFFFF"); doc.setFont("helvetica","bold"); doc.setFontSize(9);
+    doc.text("Pos.", c[0]+6, y); doc.text("Wagennummer", c[1]+6, y); doc.text("Gattung", c[2]+6, y);
+    [["Zustand",3,"l"],["Gesamt t",5],["Bremsgew. t",6],["Handbr. t",7],["Lastgr. "+kl.charAt(0)+" t",8]].forEach(([h,i,a])=>
+      a==="l" ? doc.text(h, c[i]+6, y) : doc.text(h, c[i]-4, y, {align:"right"}));
+    doc.text("Reserve", PW-M-4, y, {align:"right"});
+    W.slice(start, start+30).forEach((w,j)=>{
+      const idx = start+j, b = wagenBremse(w, kl);
+      y += 15;
+      if(idx%2===0){ fill("#F7F6F2"); doc.rect(M, y-11, PW-2*M, 15, "F"); }
+      if(b.ueberlast){ fill("#FDECEE"); doc.rect(M, y-11, PW-2*M, 15, "F"); }
+      text("#2C2C2A"); doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.text(String(idx+1), c[0]+6, y);
+      doc.setFont("courier","bold"); doc.setFontSize(10); doc.text(w.nr||"–", c[1]+6, y);
+      doc.setFont("helvetica","normal"); doc.setFontSize(9);
+      doc.text((w.gc||"").slice(0,14), c[2]+6, y);
+      doc.text(b.beladen ? "beladen" : "leer", c[3]+6, y);
+      const zr = (v,i)=> doc.text(v === null || v === undefined ? "–" : fmt(v), c[i]-4, y, {align:"right"});
+      zr(num(w.tara) ? w.tara + (num(w.ladung) ? w.ladung : 0) : null, 5);
+      zr(b.brems, 6); zr(num(w.hand) ? w.hand : null, 7); zr(b.lg, 8);
+      if(b.ueberlast){ doc.setFont("helvetica","bold"); text("#C60018"); doc.text("ÜBERLAST " + fmt(-b.reserve) + " t", PW-M-4, y, {align:"right"}); }
+      else doc.text(b.reserve === null ? "–" : fmt(b.reserve), PW-M-4, y, {align:"right"});
+    });
+    if(start+30 >= n){
+      y += 17;
+      draw("#2C2C2A"); doc.setLineWidth(.8); doc.line(M, y-11, PW-M, y-11);
+      text("#2C2C2A"); doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+      doc.text(`Total ${n} Wagen`, c[1]+6, y);
+      doc.setFontSize(9);
+      doc.text(fmt(zb.brutto), c[5]-4, y, {align:"right"}); doc.text(fmt(zb.brems), c[6]-4, y, {align:"right"}); doc.text(fmt(zb.hand), c[7]-4, y, {align:"right"});
+      y += 22;
+      doc.setFont("helvetica","bold"); doc.setFontSize(10.5); text("#2C2C2A");
+      doc.text(`Bremshundertstel: ${zb.prozent === null ? "–" : fmt(zb.prozent,0) + " %"}   ·   Bremsgewicht ${fmt(zb.brems)} t   ·   Gesamtgewicht ${fmt(zb.brutto)} t   ·   Handbremsgewicht ${fmt(zb.hand)} t`, M, y);
+      y += 16; doc.setFont("helvetica","normal"); doc.setFontSize(8.5); text("#5F5E5A");
+      const fehlt = [zb.ohneB ? `${zb.ohneB} Wagen ohne Bremsgewicht` : "", zb.ohneH ? `${zb.ohneH} ohne Handbremsgewicht` : "",
+                     zb.ueberlast.length ? `Überlast bei Wagen ${zb.ueberlast.map(i=>i+1).join(", ")}` : ""].filter(Boolean).join(" · ");
+      doc.text("Wagenzug ohne Lokomotive. Beladen = Ladung über 0 t oder Zustand „Beladen“; dann gilt das Bremsgewicht „beladen“. Lastgrenze für Streckenklasse " + kl + ".", M, y);
+      y += 12; doc.text("Richtwerte aus den erfassten Anschriften. Ersetzt keine Bremsrechnung." + (fehlt ? "  Hinweise: " + fehlt + "." : ""), M, y);
+    }
+  }
+
+  /* Fotoseiten: Nummernfoto und Detailfotos */
   const mitFoto = [];
-  for(let i=0;i<n;i++){ if(W[i].fotoId){ const d = await DB.foto(W[i].fotoId); if(d) mitFoto.push({i, d}); } }
+  for(let i=0;i<n;i++){
+    if(W[i].fotoId){ const d = await DB.foto(W[i].fotoId); if(d) mitFoto.push({i, d}); }
+    for(const [k, det] of (W[i].details||[]).entries()){ const d = await DB.foto(det.fotoId); if(d) mitFoto.push({i, d, detail:k+1, notiz:det.notiz}); }
+  }
   const cw = (PW-2*M-16)/2, ch = (PH-44-30-24-2*16)/2;
   for(let p=0;p<mitFoto.length;p+=4){
     kopf("Fotos");
@@ -3095,7 +3675,8 @@ async function bauePdf(){
       doc.setFont("courier","bold"); doc.setFontSize(10);
       doc.text(w.nr||"–", x+70, ytop+13);
       doc.setFont("helvetica","normal"); doc.setFontSize(9);
-      const cap = [w.gc, w.zustand ? zustand(w).txt : "", w.bem || w.gt].filter(Boolean).join(" – ");
+      const cap = f.detail ? (`Detail ${f.detail}` + (f.notiz ? ": " + f.notiz : ""))
+                           : [w.gc, w.zustand ? zustand(w).txt : "", w.bem || w.gt].filter(Boolean).join(" – ");
       doc.text(cap.slice(0,44), x+cw-6, ytop+13, {align:"right"});
       let ih = ch-20, iw = ih*4/3;
       if(iw > cw){ iw = cw; ih = cw*3/4; }
@@ -3154,6 +3735,17 @@ try{ const t = localStorage.getItem("theme"); if(t) document.documentElement.set
     eigeneGat = (await DB.eigene()).map(x=>({...x, eigen:true}));
     await ladeHome();
     einladungPruefen();
+    hintergrundStarten().then(()=>{ if(Team.aktiv) pushZeichnen(); });
+    sprungzielPruefen();
+    window.addEventListener("hashchange", async ()=>{
+      const h = location.hash || "";
+      if(h.startsWith("#einladung=")){
+        einladungPruefen();
+        if(!Team.sb){ try{ await Team.start(); }catch(e){} }
+        teamZeichnen(); await ladeHome();
+        document.getElementById("teamKarte").scrollIntoView({behavior:"smooth"});
+      } else sprungzielPruefen();
+    });
     teamZeichnen();
     Team.start().catch(async err=> teamMeldung("bad", "Team-Verbindung fehlgeschlagen: " + ((await verbindungPruefen()) || err.message)));
   }catch(e){
